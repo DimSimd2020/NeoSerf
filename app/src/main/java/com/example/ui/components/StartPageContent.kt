@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -60,7 +61,7 @@ fun StartPageContent(
         Icon(
           painter = painterResource(R.drawable.neoserf_mark),
           contentDescription = null,
-          tint = if (isIncognito) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+          tint = Color.Unspecified,
           modifier = Modifier.size(64.dp)
         )
         Spacer(Modifier.height(14.dp))

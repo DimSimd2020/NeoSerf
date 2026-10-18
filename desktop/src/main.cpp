@@ -6,7 +6,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName("NeoSerf");
     QCoreApplication::setApplicationName("NeoSerf");
-    QCoreApplication::setApplicationVersion("1.1.0");
+    QCoreApplication::setApplicationVersion("1.1.1");
     QApplication::setStyle("Fusion");
     BrowserWindow window;
     const auto args = app.arguments();

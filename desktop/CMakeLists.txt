@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(NeoSerf VERSION 1.1.0 LANGUAGES CXX)
+project(NeoSerf VERSION 1.1.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -26,6 +26,10 @@ endif()
 
 qt_add_executable(NeoSerf WIN32 src/main.cpp)
 target_link_libraries(NeoSerf PRIVATE neoserf_browser)
+if(WIN32)
+    target_sources(NeoSerf PRIVATE assets/neoserf.rc)
+    target_include_directories(NeoSerf PRIVATE assets)
+endif()
 install(TARGETS NeoSerf RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 qt_generate_deploy_app_script(TARGET NeoSerf OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
 install(SCRIPT ${deploy_script})
