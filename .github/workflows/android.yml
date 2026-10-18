@@ -125,6 +125,7 @@ jobs:
             --tests 'com.example.GuestModeWithoutFirebaseTest' \
             --tests 'com.example.BrowserUiRegressionTest' \
             --tests 'com.example.BrowserUiRegressionWideTest' \
+            --tests 'com.example.OmniboxSubmitGuardTest' \
             --tests 'com.example.data.repository.LocalBrowserSyncRepositoryTest'
 
       - name: Build release APK

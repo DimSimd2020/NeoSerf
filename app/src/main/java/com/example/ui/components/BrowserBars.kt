@@ -69,6 +69,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -99,11 +100,20 @@ fun TopOmniboxBar(
   onOpenShieldSheet: () -> Unit,
 ) {
   val focusManager = LocalFocusManager.current
+  val keyboardController = LocalSoftwareKeyboardController.current
   var textValue by remember(activeTab.id, activeTab.url) {
     mutableStateOf(activeTab.url)
   }
   var isFocused by remember { mutableStateOf(false) }
   var showEngineMenu by remember { mutableStateOf(false) }
+  // IME Go and hardware Enter can both fire for one submit; only navigate once.
+  var submitInFlight by remember { mutableStateOf(false) }
+
+  fun submitOmnibox() {
+    if (submitInFlight) return
+    submitInFlight = true
+    onSubmitInput(textValue)
+  }
 
   LaunchedEffect(activeTab.url) {
     if (!isFocused) {
@@ -134,7 +144,8 @@ fun TopOmniboxBar(
           .onPreviewKeyEvent { event ->
             if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
             if (event.type == KeyEventType.KeyUp && isFocused) {
-              onSubmitInput(textValue)
+              submitOmnibox()
+              keyboardController?.hide()
               focusManager.clearFocus(force = true)
             }
             true
@@ -310,16 +321,24 @@ fun TopOmniboxBar(
               ),
               keyboardActions = KeyboardActions(
                 onGo = {
-                  onSubmitInput(textValue)
+                  submitOmnibox()
+                  keyboardController?.hide()
+                  focusManager.clearFocus(force = true)
                 }
               ),
               modifier = Modifier
                 .fillMaxWidth()
-                .onFocusChanged { state -> isFocused = state.isFocused }
+                .onFocusChanged { state ->
+                  isFocused = state.isFocused
+                  if (state.isFocused) {
+                    submitInFlight = false
+                  }
+                }
                 .onPreviewKeyEvent { event ->
                   if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
                   if (event.type == KeyEventType.KeyUp) {
-                    onSubmitInput(textValue)
+                    submitOmnibox()
+                    keyboardController?.hide()
                     focusManager.clearFocus(force = true)
                   }
                   true
