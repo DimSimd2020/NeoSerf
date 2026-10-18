@@ -33,8 +33,8 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     layout->addLayout(top);
     layout->addStretch();
     auto *center = new QWidget(this);
-    center->setMaximumWidth(520);
-    center->setMinimumWidth(480);
+    center->setMaximumWidth(440);
+    center->setMinimumWidth(400);
     auto *content = new QVBoxLayout(center);
     content->setContentsMargins(0, 0, 0, 0);
     content->setSpacing(0);
@@ -103,7 +103,7 @@ void HomePage::showWeather(const Weather &weather)
 {
     weatherTitle->setText(tr("%1°   %2").arg(qRound(weather.temperature)).arg(weather.city));
     weatherDetail->setText(tr("%1 · ощущается как %2°").arg(weather.condition).arg(qRound(weather.apparent)));
-    weatherSource->setText(tr("По сети · Open-Meteo"));
+    weatherSource->setText(tr("По сети · %1").arg(weather.source));
     retry->hide();
 }
 void HomePage::showWeatherError()

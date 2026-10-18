@@ -8,7 +8,7 @@ class QLineEdit;
 class QWidget;
 class QSettings;
 QIcon neoIcon(const QString &name, const QColor &color);
-void addSubmitButton(QLineEdit *field); // Arrow inside the field, shown while there is text.
+void addSubmitButton(QLineEdit *field); // Round send button inside the field, shown while there is text.
 void applyUiTheme(QWidget *widget, const QString &mode);
 bool validMailUrl(const QUrl &url);
 QUrl mailUrl(const QSettings &settings);

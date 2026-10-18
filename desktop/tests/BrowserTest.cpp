@@ -4,6 +4,7 @@
 #include "HomePage.h"
 #include "Language.h"
 #include "Preferences.h"
+#include "SettingsPage.h"
 #include "WelcomeDialog.h"
 #include "WeatherService.h"
 #include <QAction>
@@ -16,6 +17,10 @@
 #include <QTemporaryDir>
 #include <QWebEngineSettings>
 #include <QDir>
+#include <QDateTime>
+#include <QGraphicsEffect>
+#include <QListWidget>
+#include <QScreen>
 #include <QDialog>
 #include <QComboBox>
 #include <QJsonDocument>
@@ -76,6 +81,17 @@ private slots:
         current.remove("temperature_2m");
         incomplete.insert("current", current);
         QVERIFY(!WeatherService::parseForecast(incomplete, weather));
+        // The MET Norway fallback reads the same way.
+        const auto met = QJsonDocument::fromJson(R"({"properties":{"timeseries":[{"data":{"instant":{"details":)"
+            R"({"air_temperature":-2.4,"wind_speed":5.0}},"next_1_hours":{"summary":{"symbol_code":"lightsnow_night"}}}}]}})").object();
+        Weather fallback;
+        QVERIFY(WeatherService::parseMetNo(met, fallback));
+        QCOMPARE(fallback.temperature, -2.4);
+        QVERIFY(fallback.apparent < fallback.temperature); // wind chill
+        QCOMPARE(fallback.condition, QString::fromUtf8("Снег"));
+        QCOMPARE(fallback.source, QString("MET Norway"));
+        QVERIFY(!fallback.isDay);
+        QVERIFY(!WeatherService::parseMetNo(QJsonObject{}, fallback));
     }
 
     void homeTabsMenuAndPageNavigation()
@@ -228,19 +244,12 @@ private slots:
             QAction *settingsAction = nullptr;
             for (auto *action : menu->actions()) if (action->text() == QString::fromUtf8("Настройки")) settingsAction = action;
             QVERIFY(settingsAction);
-            bool selected = false;
-            QTimer::singleShot(0, &window, [&] {
-                auto *dialog = window.findChild<QDialog *>();
-                auto *combo = dialog ? dialog->findChild<QComboBox *>("themeSelector") : nullptr;
-                if (combo) {
-                    combo->setCurrentIndex(combo->findData(mode));
-                    selected = true;
-                    dialog->accept();
-                } else if (dialog) dialog->reject();
-            });
             menu->hide();
             settingsAction->trigger();
-            QVERIFY(selected);
+            auto *page = window.findChild<SettingsPage *>();
+            QVERIFY(page && page->isVisible());
+            auto *combo = page->findChild<QComboBox *>("themeSelector");
+            combo->setCurrentIndex(combo->findData(mode));
             QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
             QCOMPARE(QSettings().value("appearance/theme").toString(), mode);
             QCOMPARE(window.property("darkTheme").toBool(), mode == "dark");
@@ -250,17 +259,20 @@ private slots:
                 if (button->property("neoIcon").isValid()) QVERIFY(!button->icon().isNull());
             }
             auto *search = window.findChild<QLineEdit *>("homeSearch");
-            // The field has only the send arrow: no clear button.
-            QCOMPARE(search->actions().size(), 1);
+            // The field has only the round send button: no clear button.
+            QVERIFY(search->actions().isEmpty());
             search->setText("arrow");
-            auto *submit = search->actions().first();
-            QVERIFY(submit->isVisible() && !submit->icon().isNull());
+            auto *submit = search->findChild<QAbstractButton *>("submitButton");
+            QVERIFY(submit && !submit->isHidden());
             search->clear();
-            QVERIFY(!submit->isVisible());
+            QVERIFY(submit->isHidden());
             const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
             if (!artifacts.isEmpty()) {
                 window.activateWindow();
                 QVERIFY(QTest::qWaitForWindowActive(&window));
+                QTest::qWait(50);
+                QVERIFY(window.grab().save(artifacts + "/desktop-settings-" + mode + ".png"));
+                window.findChild<QToolButton *>("homeButton")->click();
                 QTest::qWait(50);
                 QVERIFY(window.grab().save(artifacts + "/desktop-home-" + mode + ".png"));
                 QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
@@ -276,30 +288,36 @@ private slots:
 
     void submitArrowSendsTheAddressAndHomeSearch()
     {
+        QSettings().remove("session/urls"); // start on an empty new tab
         BrowserWindow window;
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
         auto *pages = window.findChild<QStackedWidget *>("browserPages");
         auto *address = window.findChild<QLineEdit *>("addressBar");
-        auto *submit = address->findChild<QAction *>("submitAction");
-        QVERIFY(submit && !submit->isVisible() && !submit->icon().isNull());
+        auto *submit = address->findChild<QAbstractButton *>("submitButton");
+        QVERIFY(submit && submit->isHidden());
         address->setText("example.com");
         QVERIFY(submit->isVisible());
-        QCOMPARE(address->actions().last(), submit);
-        submit->trigger();
+        // A round button inside the right end of the field.
+        QVERIFY(address->rect().contains(submit->geometry()));
+        QVERIFY(submit->geometry().center().x() > address->width() * 3 / 4);
+        QCOMPARE(submit->width(), submit->height());
+        QTest::mouseClick(submit, Qt::LeftButton);
         QCOMPARE(qobject_cast<QStackedWidget *>(pages->currentWidget())->currentIndex(), 1);
         QTest::mouseClick(window.findChild<QToolButton *>("homeButton"), Qt::LeftButton);
         auto *search = pages->currentWidget()->findChild<QLineEdit *>("homeSearch");
-        QVERIFY(search->actions().last()->objectName() == "submitAction" && !search->actions().last()->isVisible());
+        auto *send = search->findChild<QAbstractButton *>("submitButton");
+        QVERIFY(send && send->isHidden());
         search->setText(QString::fromUtf8("погода"));
-        QVERIFY(search->actions().last()->isVisible());
+        QVERIFY(send->isVisible());
+        QVERIFY(search->width() <= 440);
         const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
         if (!artifacts.isEmpty()) {
             address->setText("https://example.com");
-            QTest::qWait(60);
+            QTest::qWait(220);
             QVERIFY(window.grab().save(artifacts + "/desktop-submit-arrow.png"));
         }
-        search->actions().last()->trigger();
+        QTest::mouseClick(send, Qt::LeftButton);
         QCOMPARE(qobject_cast<QStackedWidget *>(pages->currentWidget())->currentIndex(), 1);
         window.close();
     }
@@ -348,52 +366,66 @@ private slots:
 
     void settingsApplyBrowserPreferences()
     {
+        QSettings().remove("session/urls");
         BrowserWindow window;
         window.resize(1180, 800);
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
-        window.activateWindow();
-        QVERIFY(QTest::qWaitForWindowActive(&window));
+        auto *tabs = window.findChild<QTabBar *>("browserTabs");
         QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
         auto *menu = window.findChild<QMenu *>("overflowMenu");
         QVERIFY(menu);
         QAction *settingsAction = nullptr;
         for (auto *action : menu->actions()) if (action->text() == QString::fromUtf8("Настройки")) settingsAction = action;
         QVERIFY(settingsAction);
-        bool edited = false;
-        QTimer::singleShot(0, &window, [&] {
-            auto *dialog = window.findChild<QDialog *>();
-            QVERIFY(dialog);
-            QVERIFY(dialog->findChildren<QComboBox *>().size() >= 10 && dialog->findChildren<QCheckBox *>().size() >= 10);
-            // An insecure custom mail address must keep the dialog open.
-            auto *provider = dialog->findChild<QComboBox *>("mailProvider");
-            provider->setCurrentIndex(provider->findData("custom"));
-            dialog->findChild<QLineEdit *>("mailAddress")->setText("http://insecure.example/");
-            auto *save = dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Save);
-            // Standard buttons follow the NeoSerf language, not Qt's own catalog.
-            QCOMPARE(save->text(), QString::fromUtf8("Сохранить"));
-            QCOMPARE(dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Cancel)->text(), QString::fromUtf8("Отмена"));
-            save->click();
-            QVERIFY(dialog->isVisible());
-            dialog->findChild<QLineEdit *>("mailAddress")->setText("https://mail.example.org/");
-            dialog->findChild<QCheckBox *>("site_javascript")->setChecked(false);
-            dialog->findChild<QCheckBox *>("ui_showHome")->setChecked(false);
-            dialog->findChild<QCheckBox *>("privacy_blockThirdPartyCookies")->setChecked(true);
-            auto *camera = dialog->findChild<QComboBox *>("permissions_camera");
-            camera->setCurrentIndex(camera->findData("block"));
-            auto *zoom = dialog->findChild<QComboBox *>("page_zoom");
-            zoom->setCurrentIndex(zoom->findData(150));
-            auto *startup = dialog->findChild<QComboBox *>("startup_mode");
-            startup->setCurrentIndex(startup->findData("home"));
-            edited = true;
-            const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
-            if (!artifacts.isEmpty()) QVERIFY(dialog->grab().save(artifacts + "/desktop-settings.png"));
-            save->click();
-        });
         menu->hide();
         settingsAction->trigger();
-        QVERIFY(edited);
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        // Settings open as a page in the blank tab, like chrome://settings.
+        QCOMPARE(tabs->count(), 1);
+        QCOMPARE(tabs->tabText(0), QString::fromUtf8("Настройки"));
+        QCOMPARE(window.findChild<QLineEdit *>("addressBar")->text(), QString("neoserf://settings/appearance"));
+        auto *page = window.findChild<SettingsPage *>();
+        QVERIFY(page && page->isVisible());
+        QVERIFY(page->findChildren<QComboBox *>().size() >= 10 && page->findChildren<QCheckBox *>().size() >= 10);
+        QVERIFY(!window.findChild<QDialog *>());
+        // Changes apply at once; an insecure custom mail address is refused.
+        auto *provider = page->findChild<QComboBox *>("mailProvider");
+        provider->setCurrentIndex(provider->findData("custom"));
+        auto *mail = page->findChild<QLineEdit *>("mailAddress");
+        mail->setText("http://insecure.example/");
+        emit mail->editingFinished();
+        QVERIFY(QSettings().value("mail/url").toString() != "http://insecure.example/");
+        QVERIFY(!page->findChild<QLabel *>("rowError")->isHidden());
+        mail->setText("https://mail.example.org/");
+        emit mail->editingFinished();
+        QVERIFY(page->findChild<QLabel *>("rowError")->isHidden());
+        page->findChild<QCheckBox *>("site_javascript")->setChecked(false);
+        page->findChild<QCheckBox *>("ui_showHome")->click();
+        page->findChild<QCheckBox *>("privacy_blockThirdPartyCookies")->setChecked(true);
+        auto *camera = page->findChild<QComboBox *>("permissions_camera");
+        camera->setCurrentIndex(camera->findData("block"));
+        auto *zoom = page->findChild<QComboBox *>("page_zoom");
+        zoom->setCurrentIndex(zoom->findData(150));
+        auto *startup = page->findChild<QComboBox *>("startup_mode");
+        startup->setCurrentIndex(startup->findData("home"));
+        // The section list moves between pages, and the combo list opens as a rounded popup.
+        page->showSection("sites");
+        QTRY_VERIFY(!page->findChild<QWidget *>("settingsSections")->findChild<QGraphicsEffect *>());
+        camera->showPopup();
+        auto *popup = camera->findChild<QMenu *>("comboPopup");
+        QVERIFY(popup && popup->isVisible());
+        QVERIFY(popup->testAttribute(Qt::WA_TranslucentBackground));
+        QCOMPARE(popup->actions().size(), 2);
+        const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
+        QTest::qWait(250);
+        if (!artifacts.isEmpty()) {
+            QVERIFY(window.grab().save(artifacts + "/desktop-settings.png"));
+            QVERIFY(popup->grab().save(artifacts + "/desktop-combo-popup.png"));
+        }
+        popup->actions().first()->trigger();
+        popup->close();
+        QCOMPARE(QSettings().value("permissions/camera").toString(), QString("ask"));
+        camera->setCurrentIndex(camera->findData("block"));
         QSettings stored;
         QCOMPARE(stored.value("mail/url").toString(), QString("https://mail.example.org/"));
         QCOMPARE(stored.value("site/javascript").toBool(), false);
@@ -406,9 +438,103 @@ private slots:
         const auto prefs = Preferences::load(stored);
         QCOMPARE(prefs.camera, QString("block"));
         QVERIFY(prefs.blockThirdPartyCookies && !prefs.javascript && prefs.zoomPercent == 150);
+        // Opening Settings again goes back to the same tab.
+        const int count = tabs->count();
+        window.showSettings("fonts");
+        QCOMPARE(tabs->count(), count);
+        QCOMPARE(tabs->currentIndex(), 0);
+        QCOMPARE(page->currentSection(), QString("fonts"));
         for (const auto &key : Preferences::keys()) stored.remove(key);
+        stored.remove("mail/url");
         stored.setValue("weather/enabled", false);
         stored.setValue("appearance/theme", "dark");
+        window.close();
+    }
+
+    void historyOpensFromTheMenuAndAsASettingsPage()
+    {
+        QSettings stored;
+        stored.remove("session/urls");
+        const auto now = QDateTime::currentSecsSinceEpoch();
+        stored.setValue("history", QVariantList{
+            QVariantMap{{"title", "Today page"}, {"url", "https://today.example/"}, {"time", now}},
+            QVariantMap{{"title", "Imported page"}, {"url", "https://imported.example/"}}});
+        BrowserWindow window;
+        window.resize(1180, 800);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto *tabs = window.findChild<QTabBar *>("browserTabs");
+        QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
+        auto *menu = window.findChild<QMenu *>("overflowMenu");
+        auto *history = menu->findChild<QMenu *>("historyMenu");
+        QVERIFY(history);
+        // Hovering History shows recent pages; clicking the item itself opens the full history.
+        bool listsRecent = false;
+        for (auto *action : history->actions()) listsRecent |= action->text() == "Today page";
+        QVERIFY(listsRecent);
+        menu->setActiveAction(history->menuAction());
+        QTRY_VERIFY(history->isVisible());
+        const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
+        QTest::qWait(250);
+        if (!artifacts.isEmpty()) {
+            QVERIFY(menu->grab().save(artifacts + "/desktop-menu.png"));
+            QVERIFY(history->grab().save(artifacts + "/desktop-history-menu.png"));
+        }
+        QTest::mouseClick(menu, Qt::LeftButton, Qt::NoModifier, menu->actionGeometry(history->menuAction()).center());
+        QTRY_VERIFY(!menu->isVisible());
+        auto *page = window.findChild<SettingsPage *>();
+        QVERIFY(page && page->isVisible());
+        QCOMPARE(page->currentSection(), QString("history"));
+        QCOMPARE(tabs->tabText(tabs->currentIndex()), QString::fromUtf8("История"));
+        QCOMPARE(window.findChild<QLineEdit *>("addressBar")->text(), QString("neoserf://history"));
+        QListWidget *list = nullptr;
+        for (auto *candidate : page->findChildren<QListWidget *>("libraryList"))
+            if (candidate->property("library") == "history") list = candidate;
+        QVERIFY(list && list->isVisible());
+        auto entries = [list] {
+            int count = 0;
+            for (int i = 0; i < list->count(); ++i) count += list->item(i)->data(Qt::UserRole).toString().isEmpty() ? 0 : 1;
+            return count;
+        };
+        QCOMPARE(entries(), 2);
+        QTest::qWait(300);
+        if (!artifacts.isEmpty()) QVERIFY(window.grab().save(artifacts + "/desktop-history.png"));
+        page->findChild<QLineEdit *>("historySearch")->setText("imported");
+        QCOMPARE(entries(), 1);
+        // Back leaves the internal page; neoserf:// addresses open it again.
+        window.findChild<QToolButton *>("backButton")->click();
+        QCOMPARE(qobject_cast<QStackedWidget *>(window.findChild<QStackedWidget *>("browserPages")->currentWidget())->currentIndex(), 0);
+        auto *address = window.findChild<QLineEdit *>("addressBar");
+        address->setText("neoserf://bookmarks");
+        QTest::keyClick(address, Qt::Key_Return);
+        QCOMPARE(page->currentSection(), QString("bookmarks"));
+        stored.remove("history");
+        window.close();
+    }
+
+    void windowDrawsItsOwnTitleBar()
+    {
+        BrowserWindow window;
+        window.resize(1000, 700);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        QVERIFY(window.windowFlags().testFlag(Qt::FramelessWindowHint));
+        auto *strip = window.findChild<QWidget *>("tabStrip");
+        auto *close = strip->findChild<QToolButton *>("closeWindowButton");
+        auto *maximize = strip->findChild<QToolButton *>("maximizeButton");
+        QVERIFY(close && maximize && strip->findChild<QToolButton *>("minimizeButton"));
+        // Caption buttons sit in the tab row, flush with the top-right corner.
+        const auto corner = close->mapTo(&window, close->rect().topRight());
+        QVERIFY(corner.y() <= 1);
+        QVERIFY(window.width() - corner.x() <= 2);
+        QCOMPARE(maximize->property("neoIcon").toString(), QString("maximize"));
+        maximize->click();
+        QTRY_VERIFY(window.isMaximized());
+        QCOMPARE(maximize->property("neoIcon").toString(), QString("restore"));
+        // Content stays on screen when maximized.
+        QVERIFY(window.screen()->availableGeometry().contains(close->mapToGlobal(close->rect().center())));
+        maximize->click();
+        QTRY_VERIFY(!window.isMaximized());
         window.close();
     }
 
@@ -454,7 +580,9 @@ private slots:
         QCOMPARE(primary->text(), QString("Next"));
         QVERIFY(!back->isVisible());
         auto *importStart = dialog.findChild<QPushButton *>("importStart");
-        QVERIFY(importStart && !importStart->isEnabled()); // Nothing is imported until a source is picked.
+        // A found browser profile is picked in advance, so the import button is ready.
+        QVERIFY(importStart);
+        QCOMPARE(importStart->isEnabled(), !dialog.findChildren<QToolButton *>("importSource").isEmpty());
         const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
         if (!artifacts.isEmpty()) QVERIFY(dialog.grab().save(artifacts + "/desktop-welcome.png"));
 

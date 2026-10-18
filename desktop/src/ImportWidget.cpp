@@ -42,6 +42,8 @@ ImportWidget::ImportWidget(QWidget *parent) : QWidget(parent)
     empty->setObjectName("welcomeDetail");
     empty->setWordWrap(true);
     empty->setVisible(sources->buttons().isEmpty());
+    // The most likely source is ready to go, so "Transfer" works right away.
+    if (!sources->buttons().isEmpty()) sources->buttons().first()->setChecked(true);
     layout->addWidget(empty);
     choose = new QToolButton(this);
     choose->setObjectName("chooseProfile");

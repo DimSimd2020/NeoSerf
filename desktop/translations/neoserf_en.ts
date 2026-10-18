@@ -48,6 +48,18 @@
         <translation>New tab</translation>
     </message>
     <message>
+        <source>Свернуть</source>
+        <translation>Minimize</translation>
+    </message>
+    <message>
+        <source>Развернуть</source>
+        <translation>Maximize</translation>
+    </message>
+    <message>
+        <source>Закрыть</source>
+        <translation>Close</translation>
+    </message>
+    <message>
         <source>Инкогнито</source>
         <translation>Incognito</translation>
     </message>
@@ -84,8 +96,24 @@
         <translation>Incognito tab</translation>
     </message>
     <message>
+        <source>Открыть историю</source>
+        <translation>Open history</translation>
+    </message>
+    <message>
+        <source>Недавно закрытые</source>
+        <translation>Recently closed</translation>
+    </message>
+    <message>
+        <source>Недавно посещённые</source>
+        <translation>Recently visited</translation>
+    </message>
+    <message>
         <source>Закладки</source>
         <translation>Bookmarks</translation>
+    </message>
+    <message>
+        <source>Свернуть в окно</source>
+        <translation>Restore down</translation>
     </message>
     <message>
         <source>История</source>
@@ -100,6 +128,18 @@
         <translation>Settings</translation>
     </message>
     <message>
+        <source>Добавить в закладки</source>
+        <translation>Bookmark this page</translation>
+    </message>
+    <message>
+        <source>Все закладки</source>
+        <translation>All bookmarks</translation>
+    </message>
+    <message>
+        <source>Масштаб</source>
+        <translation>Zoom</translation>
+    </message>
+    <message>
         <source>Выход</source>
         <translation>Exit</translation>
     </message>
@@ -110,18 +150,6 @@
     <message>
         <source>Сохранено в закладки</source>
         <translation>Bookmark saved</translation>
-    </message>
-    <message>
-        <source>История пока пуста</source>
-        <translation>Your history is empty</translation>
-    </message>
-    <message>
-        <source>Сохранённых страниц пока нет</source>
-        <translation>No bookmarks yet</translation>
-    </message>
-    <message>
-        <source>Удалить</source>
-        <translation>Delete</translation>
     </message>
     <message>
         <source>Текст</source>
@@ -183,8 +211,8 @@
         <translation>%1 · feels like %2°</translation>
     </message>
     <message>
-        <source>По сети · Open-Meteo</source>
-        <translation>Network location · Open-Meteo</translation>
+        <source>По сети · %1</source>
+        <translation>Online · %1</translation>
     </message>
     <message>
         <source>Погода недоступна</source>
@@ -290,11 +318,7 @@
     </message>
 </context>
 <context>
-    <name>SettingsDialog</name>
-    <message>
-        <source>Тема</source>
-        <translation>Theme</translation>
-    </message>
+    <name>SettingsPage</name>
     <message>
         <source>Настройки</source>
         <translation>Settings</translation>
@@ -302,6 +326,10 @@
     <message>
         <source>Оформление</source>
         <translation>Appearance</translation>
+    </message>
+    <message>
+        <source>Тема</source>
+        <translation>Theme</translation>
     </message>
     <message>
         <source>Как на устройстве</source>
@@ -324,6 +352,10 @@
         <translation>The language changes after NeoSerf restarts.</translation>
     </message>
     <message>
+        <source>Панель и главная страница</source>
+        <translation>Toolbar and home page</translation>
+    </message>
+    <message>
         <source>Показывать кнопку «Главная»</source>
         <translation>Show the Home button</translation>
     </message>
@@ -337,9 +369,9 @@
     </message>
     <message>
         <source>Регион определяется по IP-адресу. VPN может изменить регион.
-Данные: Open-Meteo. Геолокация: ipwho.is.</source>
+Данные: Open-Meteo или MET Norway. Геолокация: ipwho.is.</source>
         <translation>The region is detected from your IP address. A VPN can change it.
-Data: Open-Meteo. Geolocation: ipwho.is.</translation>
+Data: Open-Meteo or MET Norway. Geolocation: ipwho.is.</translation>
     </message>
     <message>
         <source>Поиск и почта</source>
@@ -364,10 +396,6 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
     <message>
         <source>Почта по умолчанию</source>
         <translation>Default mail</translation>
-    </message>
-    <message>
-        <source>Адрес почты</source>
-        <translation>Mail address</translation>
     </message>
     <message>
         <source>При запуске</source>
@@ -402,12 +430,36 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
         <translation>Clear history on exit</translation>
     </message>
     <message>
-        <source>Очистить данные просмотра…</source>
-        <translation>Clear browsing data…</translation>
-    </message>
-    <message>
         <source>Вкладки инкогнито ничего не сохраняют: ни историю, ни cookie.</source>
         <translation>Incognito tabs save nothing: no history and no cookies.</translation>
+    </message>
+    <message>
+        <source>Удалить данные о работе в браузере</source>
+        <translation>Delete browsing data</translation>
+    </message>
+    <message>
+        <source>История</source>
+        <translation>History</translation>
+    </message>
+    <message>
+        <source>Закладки</source>
+        <translation>Bookmarks</translation>
+    </message>
+    <message>
+        <source>Файлы cookie</source>
+        <translation>Cookies</translation>
+    </message>
+    <message>
+        <source>Кэш изображений и файлов</source>
+        <translation>Cached images and files</translation>
+    </message>
+    <message>
+        <source>Удалить данные</source>
+        <translation>Delete data</translation>
+    </message>
+    <message>
+        <source>Выбранные данные удалены.</source>
+        <translation>The selected data was deleted.</translation>
     </message>
     <message>
         <source>Спрашивать</source>
@@ -420,6 +472,10 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
     <message>
         <source>Сайты</source>
         <translation>Sites</translation>
+    </message>
+    <message>
+        <source>Содержимое</source>
+        <translation>Content</translation>
     </message>
     <message>
         <source>Разрешить JavaScript</source>
@@ -444,6 +500,10 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
     <message>
         <source>Тёмное оформление сайтов</source>
         <translation>Dark mode for websites</translation>
+    </message>
+    <message>
+        <source>Разрешения</source>
+        <translation>Permissions</translation>
     </message>
     <message>
         <source>Местоположение</source>
@@ -502,16 +562,32 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
         <translation>Downloads</translation>
     </message>
     <message>
-        <source>Спрашивать, куда сохранять файл</source>
+        <source>Папка загрузок</source>
+        <translation>Downloads folder</translation>
+    </message>
+    <message>
+        <source>Изменить</source>
+        <translation>Change</translation>
+    </message>
+    <message>
+        <source>Спрашивать, куда сохранять каждый файл</source>
         <translation>Ask where to save each file</translation>
     </message>
     <message>
-        <source>Выбрать…</source>
-        <translation>Choose…</translation>
+        <source>Искать в истории</source>
+        <translation>Search history</translation>
     </message>
     <message>
-        <source>Папка загрузок</source>
-        <translation>Downloads folder</translation>
+        <source>Искать в закладках</source>
+        <translation>Search bookmarks</translation>
+    </message>
+    <message>
+        <source>Очистить историю</source>
+        <translation>Clear history</translation>
+    </message>
+    <message>
+        <source>Удалить всю историю просмотров?</source>
+        <translation>Delete all browsing history?</translation>
     </message>
     <message>
         <source>Перенос данных</source>
@@ -522,54 +598,64 @@ Data: Open-Meteo. Geolocation: ipwho.is.</translation>
         <translation>About NeoSerf</translation>
     </message>
     <message>
-        <source>NeoSerf %1
-Qt %2 · Chromium %3</source>
-        <translation>NeoSerf %1
-Qt %2 · Chromium %3</translation>
+        <source>Qt %1 · Chromium %2</source>
+        <translation>Qt %1 · Chromium %2</translation>
     </message>
     <message>
         <source>Это настольная версия. Облачная синхронизация, хранилище паролей и блокировщик рекламы пока доступны только в Android-версии.</source>
         <translation>This is the desktop version. Cloud sync, the password vault and the ad blocker are currently available only in the Android version.</translation>
     </message>
     <message>
+        <source>Сброс настроек</source>
+        <translation>Reset settings</translation>
+    </message>
+    <message>
+        <source>Вернуть настройки по умолчанию. Закладки и история останутся.</source>
+        <translation>Restore the default settings. Bookmarks and history are kept.</translation>
+    </message>
+    <message>
+        <source>Сбросить</source>
+        <translation>Reset</translation>
+    </message>
+    <message>
         <source>Сбросить настройки</source>
         <translation>Reset settings</translation>
+    </message>
+    <message>
+        <source>Вернуть все настройки к значениям по умолчанию? Закладки и история останутся.</source>
+        <translation>Restore all settings to their defaults? Bookmarks and history will be kept.</translation>
     </message>
     <message>
         <source>Введите полный HTTPS-адрес почтового сервиса.</source>
         <translation>Enter the full HTTPS address of the mail service.</translation>
     </message>
     <message>
-        <source>Очистить данные просмотра</source>
-        <translation>Clear browsing data</translation>
+        <source>Ранее</source>
+        <translation>Earlier</translation>
     </message>
     <message>
-        <source>История</source>
-        <translation>History</translation>
+        <source>Сегодня</source>
+        <translation>Today</translation>
     </message>
     <message>
-        <source>Закладки</source>
-        <translation>Bookmarks</translation>
+        <source>Вчера</source>
+        <translation>Yesterday</translation>
     </message>
     <message>
-        <source>Файлы cookie</source>
-        <translation>Cookies</translation>
+        <source>Удалить</source>
+        <translation>Delete</translation>
     </message>
     <message>
-        <source>Кэш изображений и файлов</source>
-        <translation>Cached images and files</translation>
+        <source>Ничего не найдено</source>
+        <translation>Nothing found</translation>
     </message>
     <message>
-        <source>Очистить</source>
-        <translation>Clear</translation>
+        <source>История пока пуста</source>
+        <translation>Your history is empty</translation>
     </message>
     <message>
-        <source>Выбранные данные удалены.</source>
-        <translation>The selected data was deleted.</translation>
-    </message>
-    <message>
-        <source>Вернуть все настройки к значениям по умолчанию? Закладки и история останутся.</source>
-        <translation>Restore all settings to their defaults? Bookmarks and history will be kept.</translation>
+        <source>Сохранённых страниц пока нет</source>
+        <translation>No bookmarks yet</translation>
     </message>
 </context>
 <context>

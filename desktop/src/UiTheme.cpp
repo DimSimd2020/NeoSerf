@@ -47,7 +47,7 @@ void applyUiTheme(QWidget *widget, const QString &mode)
         {"selection", dark ? "#245488" : "#d9e9ff"}, {"selectionText", dark ? "#ededed" : "#12385e"},
         {"subtle", dark ? "#929292" : "#686868"},
         {"disabled", dark ? "#656565" : "#989898"}, {"menuHover", dark ? "#383838" : "#e1e1e1"},
-        {"menu", dark ? "rgba(37, 37, 37, 242)" : "rgba(249, 249, 249, 242)"},
+        {"menu", dark ? "#262626" : "#fbfbfb"},
         {"incognito", dark ? "#a491ff" : "#6545cc"},
         {"chevronDown", dark ? ":/assets/icons/chevron-down-dark.svg" : ":/assets/icons/chevron-down-light.svg"},
         {"chevronLeft", dark ? ":/assets/icons/chevron-left-dark.svg" : ":/assets/icons/chevron-left-light.svg"},

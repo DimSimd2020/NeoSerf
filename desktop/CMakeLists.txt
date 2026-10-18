@@ -20,7 +20,8 @@ set(NEOSERF_SOURCES
     src/ImportWidget.cpp src/ImportWidget.h
     src/WelcomeDialog.cpp src/WelcomeDialog.h
     src/Preferences.cpp src/Preferences.h
-    src/SettingsDialog.cpp src/SettingsDialog.h
+    src/SettingsPage.cpp src/SettingsPage.h
+    src/Widgets.cpp src/Widgets.h
     resources.qrc)
 add_library(neoserf_browser STATIC ${NEOSERF_SOURCES})
 target_include_directories(neoserf_browser PUBLIC src)
