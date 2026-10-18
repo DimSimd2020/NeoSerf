@@ -3,7 +3,6 @@ package com.example.ui.components
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +62,7 @@ import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -130,7 +130,15 @@ fun TopOmniboxBar(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .padding(horizontal = 10.dp, vertical = 8.dp),
+          .padding(horizontal = 10.dp, vertical = 8.dp)
+          .onPreviewKeyEvent { event ->
+            if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
+            if (event.type == KeyEventType.KeyUp && isFocused) {
+              onSubmitInput(textValue)
+              focusManager.clearFocus(force = true)
+            }
+            true
+          },
         verticalAlignment = Alignment.CenterVertically
       ) {
         // Search Engine Selector Pill
@@ -145,10 +153,7 @@ fun TopOmniboxBar(
                 color = accentColor.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(12.dp)
               )
-              .focusProperties { canFocus = false }
-              .onPreviewKeyEvent { event ->
-                event.key == Key.Enter || event.key == Key.NumPadEnter
-              }
+              .ignoreEnterKeyClicks()
               .semantics {
                 role = Role.Button
                 onClick {
@@ -236,7 +241,17 @@ fun TopOmniboxBar(
           Row(
             modifier = Modifier
               .clip(RoundedCornerShape(8.dp))
-              .clickable { onOpenShieldSheet() }
+              .ignoreEnterKeyClicks()
+              .semantics {
+                role = Role.Button
+                onClick {
+                  onOpenShieldSheet()
+                  true
+                }
+              }
+              .pointerInput(Unit) {
+                detectTapGestures(onTap = { onOpenShieldSheet() })
+              }
               .padding(horizontal = 4.dp, vertical = 4.dp)
               .testTag("omnibox_shield_badge"),
             verticalAlignment = Alignment.CenterVertically
@@ -296,21 +311,17 @@ fun TopOmniboxBar(
               keyboardActions = KeyboardActions(
                 onGo = {
                   onSubmitInput(textValue)
-                  focusManager.clearFocus(force = true)
                 }
               ),
               modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { state -> isFocused = state.isFocused }
                 .onPreviewKeyEvent { event ->
-                  val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
-                  if (!isEnter) return@onPreviewKeyEvent false
-                  if (event.type == KeyEventType.KeyDown) {
+                  if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
+                  if (event.type == KeyEventType.KeyUp) {
                     onSubmitInput(textValue)
                     focusManager.clearFocus(force = true)
                   }
-                  // Consume KeyDown and KeyUp so Enter is not delivered as a click
-                  // to the search-engine selector after focus leaves the field.
                   true
                 }
                 .testTag("omnibox_input")
@@ -590,4 +601,15 @@ fun BottomBrowserBar(
       }
     }
   }
+}
+
+private fun KeyEvent.isEnterOrNumPadEnter(): Boolean {
+  return key == Key.Enter || key == Key.NumPadEnter
+}
+
+/** Prevents hardware Enter KeyUp from being treated as a click on omnibox chrome. */
+private fun Modifier.ignoreEnterKeyClicks(): Modifier {
+  return this
+    .focusProperties { canFocus = false }
+    .onPreviewKeyEvent { event -> event.isEnterOrNumPadEnter() }
 }
