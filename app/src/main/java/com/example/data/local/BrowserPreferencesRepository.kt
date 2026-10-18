@@ -43,6 +43,7 @@ class BrowserPreferencesRepository(private val context: Context) {
     val READER_FONT_SIZE = intPreferencesKey("reader_font_size_sp")
     val READER_THEME = stringPreferencesKey("reader_theme")
     val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+    val LOCATION_PROMPT_SHOWN = booleanPreferencesKey("location_prompt_shown")
   }
 
   val preferencesFlow: Flow<BrowserPreferencesState> = context.browserDataStore.data.map { prefs ->
@@ -119,6 +120,23 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   suspend fun setOnboardingCompleted() {
     context.browserDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
+  }
+
+  /** Returns true only the first time it is called while the weather widget is on, so the location prompt shows once. */
+  suspend fun claimLocationPrompt(): Boolean {
+    var claimed = false
+    context.browserDataStore.edit { prefs ->
+      if ((prefs[Keys.SHOW_WEATHER] ?: true) && prefs[Keys.LOCATION_PROMPT_SHOWN] != true) {
+        prefs[Keys.LOCATION_PROMPT_SHOWN] = true
+        claimed = true
+      }
+    }
+    return claimed
+  }
+
+  @androidx.annotation.VisibleForTesting
+  internal suspend fun resetLocationPrompt() {
+    context.browserDataStore.edit { it.remove(Keys.LOCATION_PROMPT_SHOWN) }
   }
 
   suspend fun setReaderTheme(theme: ReaderTheme) {

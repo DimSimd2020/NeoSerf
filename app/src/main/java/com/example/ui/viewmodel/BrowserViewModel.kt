@@ -473,6 +473,8 @@ class BrowserViewModel(
     viewModelScope.launch { prefsRepository.setShowWeatherWidget(show) }
   }
 
+  suspend fun claimLocationPrompt(): Boolean = prefsRepository.claimLocationPrompt()
+
   fun setShowSpeedDial(show: Boolean) {
     viewModelScope.launch { prefsRepository.setShowSpeedDial(show) }
   }

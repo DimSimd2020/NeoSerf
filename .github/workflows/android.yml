@@ -130,7 +130,8 @@ jobs:
             --tests 'com.example.data.remote.WeatherRepositoryTest' \
             --tests 'com.example.OmniboxSubmitGuardTest' \
             --tests 'com.example.data.repository.LocalBrowserSyncRepositoryTest' \
-            --tests 'com.example.WelcomeScreenTest'
+            --tests 'com.example.WelcomeScreenTest' \
+            --tests 'com.example.LocationPromptTest'
 
       - name: Build release APK
         run: |

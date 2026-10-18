@@ -84,6 +84,15 @@ fun BrowserScreen(
     androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
   ) { viewModel.refreshWeather() }
   val context = LocalContext.current
+  // Ask once for the device location so the weather follows it instead of the network region.
+  LaunchedEffect(Unit) {
+    val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+      context, android.Manifest.permission.ACCESS_COARSE_LOCATION
+    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    if (!granted && viewModel.claimLocationPrompt()) {
+      locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+    }
+  }
   val scope = rememberCoroutineScope()
   val credentialManager = remember(cloudSyncAvailable) {
     if (cloudSyncAvailable) CredentialManager.create(context) else null
