@@ -9,13 +9,19 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
+import com.example.data.model.BrowserTab
+import com.example.ui.components.TopOmniboxBar
+import com.example.ui.theme.NeoSerfTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -73,6 +79,18 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithTag("settings_weather").assertIsDisplayed()
   }
 
+  @Test
+  fun imeGoSubmitsQuery() {
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_input").performClick()
+    composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
+    composeRule.onNodeWithTag("omnibox_input").performImeAction()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_input").assertTextEquals("https://example.com")
+    composeRule.onNodeWithText("Универсальный поиск Google").assertDoesNotExist()
+    composeRule.onNodeWithTag("adblock_master_switch").assertDoesNotExist()
+  }
+
   @Test fun tabsSheetFitsNarrowWidth() {
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
@@ -106,5 +124,55 @@ class BrowserUiRegressionWideTest {
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
+  }
+}
+
+@OptIn(ExperimentalTestApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [29], qualifiers = "w360dp-h720dp-xhdpi")
+class OmniboxSubmitGuardTest {
+
+  @get:Rule
+  val composeRule = createComposeRule()
+
+  @Test
+  fun imeGoSubmitsOnce() {
+    val submits = submitFromOmnibox { node ->
+      node.performImeAction()
+    }
+    assertEquals(1, submits)
+  }
+
+  @Test
+  fun hardwareEnterSubmitsOnce() {
+    val submits = submitFromOmnibox { node ->
+      node.performKeyInput { pressKey(Key.Enter) }
+    }
+    assertEquals(1, submits)
+  }
+
+  private fun submitFromOmnibox(
+    submit: (SemanticsNodeInteraction) -> Unit,
+  ): Int {
+    var submits = 0
+    composeRule.setContent {
+      NeoSerfTheme {
+        TopOmniboxBar(
+          activeTab = BrowserTab(),
+          isBookmarked = false,
+          adBlockEnabled = true,
+          onSubmitInput = { submits++ },
+          onToggleBookmark = {},
+          onReload = {},
+          onOpenShieldSheet = {},
+        )
+      }
+    }
+    val node = composeRule.onNodeWithTag("omnibox_input")
+    node.performClick()
+    node.performTextInput("example.com")
+    submit(node)
+    composeRule.waitForIdle()
+    return submits
   }
 }

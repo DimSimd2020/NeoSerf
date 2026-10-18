@@ -127,6 +127,7 @@ jobs:
             --tests 'com.example.BrowserUiRegressionWideTest' \
             --tests 'com.example.StartSearchFieldTest' \
             --tests 'com.example.data.remote.WeatherRepositoryTest' \
+            --tests 'com.example.OmniboxSubmitGuardTest' \
             --tests 'com.example.data.repository.LocalBrowserSyncRepositoryTest'
 
       - name: Build release APK
