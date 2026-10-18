@@ -187,10 +187,12 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
 #ifdef Q_OS_WIN
         // Go through Windows like a native caption button, so the button, a double-click and snapping
         // all produce the same maximized state and restore the same size.
-        SendMessage(reinterpret_cast<HWND>(winId()), WM_SYSCOMMAND, isMaximized() ? SC_RESTORE : SC_MAXIMIZE, 0);
-#else
-        isMaximized() ? showNormal() : showMaximized();
+        if (QGuiApplication::platformName() == "windows") {
+            SendMessage(reinterpret_cast<HWND>(winId()), WM_SYSCOMMAND, isMaximized() ? SC_RESTORE : SC_MAXIMIZE, 0);
+            return;
+        }
 #endif
+        isMaximized() ? showNormal() : showMaximized();
     });
     connect(closeWindow, &QToolButton::clicked, this, &QWidget::close);
     layout->addWidget(tabStrip);
