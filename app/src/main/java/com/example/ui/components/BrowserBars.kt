@@ -68,7 +68,6 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -98,8 +97,8 @@ fun TopOmniboxBar(
   onToggleBookmark: () -> Unit,
   onReload: () -> Unit,
   onOpenShieldSheet: () -> Unit,
+  onMoveFocusToContent: () -> Unit = {},
 ) {
-  val focusManager = LocalFocusManager.current
   val keyboardController = LocalSoftwareKeyboardController.current
   var textValue by remember(activeTab.id, activeTab.url) {
     mutableStateOf(activeTab.url)
@@ -113,6 +112,13 @@ fun TopOmniboxBar(
     if (submitInFlight) return
     submitInFlight = true
     onSubmitInput(textValue)
+  }
+
+  // Hardware keys leave touch mode, so clearFocus() returns to the omnibox
+  // (first focusable). Move focus to page content instead.
+  fun dismissOmnibox() {
+    keyboardController?.hide()
+    onMoveFocusToContent()
   }
 
   LaunchedEffect(activeTab.url) {
@@ -145,8 +151,7 @@ fun TopOmniboxBar(
             if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
             if (event.type == KeyEventType.KeyUp && isFocused) {
               submitOmnibox()
-              keyboardController?.hide()
-              focusManager.clearFocus(force = true)
+              dismissOmnibox()
             }
             true
           },
@@ -322,8 +327,7 @@ fun TopOmniboxBar(
               keyboardActions = KeyboardActions(
                 onGo = {
                   submitOmnibox()
-                  keyboardController?.hide()
-                  focusManager.clearFocus(force = true)
+                  dismissOmnibox()
                 }
               ),
               modifier = Modifier
@@ -338,8 +342,7 @@ fun TopOmniboxBar(
                   if (!event.isEnterOrNumPadEnter()) return@onPreviewKeyEvent false
                   if (event.type == KeyEventType.KeyUp) {
                     submitOmnibox()
-                    keyboardController?.hide()
-                    focusManager.clearFocus(force = true)
+                    dismissOmnibox()
                   }
                   true
                 }
