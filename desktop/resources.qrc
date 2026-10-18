@@ -4,17 +4,24 @@
     <file>assets/style.qss</file>
     <file>assets/icons/autofill.svg</file>
     <file>assets/icons/back.svg</file>
-    <file>assets/icons/bookmark.svg</file>
     <file>assets/icons/bookmark-filled.svg</file>
+    <file>assets/icons/bookmark.svg</file>
     <file>assets/icons/close.svg</file>
-    <file>assets/icons/cloud.svg</file>
+    <file>assets/icons/check-white.svg</file>
+    <file>assets/icons/chevron-down-dark.svg</file>
+    <file>assets/icons/chevron-down-light.svg</file>
+    <file>assets/icons/chevron-left-dark.svg</file>
+    <file>assets/icons/chevron-left-light.svg</file>
+    <file>assets/icons/chevron-right-dark.svg</file>
+    <file>assets/icons/chevron-right-light.svg</file>
     <file>assets/icons/cloud-sync.svg</file>
+    <file>assets/icons/cloud.svg</file>
     <file>assets/icons/copy.svg</file>
     <file>assets/icons/delete.svg</file>
     <file>assets/icons/device.svg</file>
     <file>assets/icons/drop.svg</file>
-    <file>assets/icons/eye.svg</file>
     <file>assets/icons/eye-off.svg</file>
+    <file>assets/icons/eye.svg</file>
     <file>assets/icons/fog.svg</file>
     <file>assets/icons/forward.svg</file>
     <file>assets/icons/globe.svg</file>
@@ -24,6 +31,7 @@
     <file>assets/icons/location.svg</file>
     <file>assets/icons/lock.svg</file>
     <file>assets/icons/logout.svg</file>
+    <file>assets/icons/mail.svg</file>
     <file>assets/icons/menu.svg</file>
     <file>assets/icons/moon.svg</file>
     <file>assets/icons/password.svg</file>
@@ -31,8 +39,8 @@
     <file>assets/icons/reload.svg</file>
     <file>assets/icons/search.svg</file>
     <file>assets/icons/settings.svg</file>
-    <file>assets/icons/shield.svg</file>
     <file>assets/icons/shield-off.svg</file>
+    <file>assets/icons/shield.svg</file>
     <file>assets/icons/snow.svg</file>
     <file>assets/icons/storm.svg</file>
     <file>assets/icons/sun.svg</file>

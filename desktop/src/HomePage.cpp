@@ -3,7 +3,9 @@
 #include <QAction>
 #include <QLabel>
 #include <QLineEdit>
+#include <QHBoxLayout>
 #include <QPushButton>
+#include <QToolButton>
 #include <QSvgRenderer>
 #include <QVBoxLayout>
 #include <QPainter>
@@ -13,7 +15,22 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
 {
     setObjectName("homePage");
     auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(24, 32, 24, 60);
+    layout->setContentsMargins(24, 12, 20, 60);
+    // Mail link in the top-right corner of the page, under the navigation bar.
+    auto *top = new QHBoxLayout;
+    top->addStretch();
+    mail = new QToolButton(this);
+    mail->setObjectName("mailButton");
+    mail->setText(tr("Почта"));
+    mail->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    mail->setProperty("neoIcon", "mail");
+    mail->setIcon(neoIcon("mail", palette().color(QPalette::Text)));
+    mail->setIconSize(QSize(18, 18));
+    mail->setAccessibleName(tr("Почта"));
+    mail->setCursor(Qt::PointingHandCursor);
+    connect(mail, &QToolButton::clicked, this, &HomePage::mailRequested);
+    top->addWidget(mail);
+    layout->addLayout(top);
     layout->addStretch();
     auto *center = new QWidget(this);
     center->setMaximumWidth(520);
@@ -49,7 +66,7 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     search->setObjectName("homeSearch");
     search->setPlaceholderText(tr("Поиск или адрес сайта"));
     search->setAccessibleName(tr("Поиск или адрес сайта"));
-    addClearButton(search);
+    addSubmitButton(search);
     connect(search, &QLineEdit::returnPressed, this, [this, search] {
         if (!search->text().trimmed().isEmpty()) emit submitted(search->text());
     });
@@ -81,6 +98,7 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
 }
 
 void HomePage::setWeatherEnabled(bool enabled) { weatherBox->setVisible(enabled); }
+void HomePage::setMailVisible(bool visible) { mail->setVisible(visible); }
 void HomePage::showWeather(const Weather &weather)
 {
     weatherTitle->setText(tr("%1°   %2").arg(qRound(weather.temperature)).arg(weather.city));

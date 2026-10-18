@@ -78,7 +78,7 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text('\n'.join(lines), encoding='utf-8')
     resources = ['assets/logo.svg', 'assets/style.qss']
-    resources += [f'assets/icons/{name}.svg' for name in sorted(ICONS.values())]
+    resources += [f'assets/icons/{path.name}' for path in sorted((ROOT / 'desktop/assets/icons').glob('*.svg'))]
     (ROOT / 'desktop/resources.qrc').write_text('<RCC>\n  <qresource prefix="/">\n' +
         ''.join(f'    <file>{path}</file>\n' for path in resources) + '  </qresource>\n</RCC>\n', encoding='utf-8')
     print(f'Generated {len(ICONS)} Compose icons and Qt resource entries from shared SVGs')

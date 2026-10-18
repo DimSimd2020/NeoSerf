@@ -2,6 +2,7 @@
 #include "AddressResolver.h"
 #include "HomePage.h"
 #include "UiAssets.h"
+#include "SettingsDialog.h"
 #include <QApplication>
 #include <QStyleHints>
 #include <QAction>
@@ -21,7 +22,6 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
-#include <QMessageBox>
 #include <QPropertyAnimation>
 #include <QProgressBar>
 #include <QPushButton>
@@ -35,16 +35,14 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWebEngineDownloadRequest>
+#include <QWebEngineCookieStore>
 #include <QWebEngineHistory>
 #include <QWebEngineNewWindowRequest>
 #include <QWebEnginePage>
 #include <QWebEnginePermission>
 #include <QWebEngineProfile>
+#include <QWebEngineSettings>
 #include <QWebEngineView>
-#ifdef Q_OS_WIN
-#include <windows.h>
-#include <dwmapi.h>
-#endif
 
 class CompactTabBar : public QTabBar {
 public:
@@ -73,11 +71,11 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] {
         if (settings.value("appearance/theme", "system") == "system") applyTheme();
     });
+    prefs = Preferences::load(settings);
     regularProfile = new QWebEngineProfile("NeoSerf", this);
     const auto storage = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     regularProfile->setPersistentStoragePath(storage + "/web");
     regularProfile->setCachePath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation) + "/web");
-    regularProfile->setPersistentCookiesPolicy(QWebEngineProfile::AllowPersistentCookies);
     privateProfile = new QWebEngineProfile(this);
     configureProfile(regularProfile);
     configureProfile(privateProfile);
@@ -115,7 +113,7 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     address->setObjectName("addressBar");
     address->setPlaceholderText(tr("Поиск или адрес сайта"));
     address->setAccessibleName(tr("Адресная строка"));
-    addClearButton(address);
+    addSubmitButton(address);
     toolbar->addWidget(address);
     connect(address, &QLineEdit::returnPressed, this, [this] { navigate(address->text()); });
     addButton(QString::fromUtf8("☆"), tr("Сохранить в закладки · Ctrl+D"), "bookmarkButton", [this] { bookmarkPage(); });
@@ -210,11 +208,13 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     restoreGeometry(settings.value("window/geometry").toByteArray());
     this->layout()->activate();
     layout->activate();
-    const auto urls = settings.value("session/urls", QStringList{QString()}).toStringList();
+    const auto urls = prefs.startup == "home" ? QStringList{QString()}
+        : settings.value("session/urls", QStringList{QString()}).toStringList();
     for (const auto &url : urls) newTab(false, QUrl(url));
     if (tabs->count() == 0) newTab();
     tabs->setCurrentIndex(qBound(0, settings.value("session/active", 0).toInt(), tabs->count() - 1));
     weather.setEnabled(settings.value("weather/enabled", true).toBool());
+    applyPreferences();
 }
 
 BrowserWindow::~BrowserWindow()
@@ -227,65 +227,7 @@ BrowserWindow::~BrowserWindow()
 
 void BrowserWindow::applyTheme()
 {
-    const auto mode = settings.value("appearance/theme", "system").toString();
-    const bool dark = mode == "dark" || (mode == "system" &&
-        QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
-    setProperty("darkTheme", dark);
-    const QColor background(dark ? "#191919" : "#f3f3f3");
-    const QColor text(dark ? "#ededed" : "#1b1b1b");
-    const QColor muted(dark ? "#a3a3a3" : "#606060");
-    const QColor field(dark ? "#252525" : "#e6e6e6");
-    const QColor accent(dark ? "#459fff" : "#166ad8");
-    auto colors = palette();
-    colors.setColor(QPalette::Window, background);
-    colors.setColor(QPalette::WindowText, text);
-    colors.setColor(QPalette::Base, field);
-    colors.setColor(QPalette::AlternateBase, background);
-    colors.setColor(QPalette::Text, text);
-    colors.setColor(QPalette::Button, field);
-    colors.setColor(QPalette::ButtonText, text);
-    colors.setColor(QPalette::Highlight, accent);
-    colors.setColor(QPalette::HighlightedText, Qt::white);
-    colors.setColor(QPalette::PlaceholderText, muted);
-    colors.setColor(QPalette::ToolTipBase, field);
-    colors.setColor(QPalette::ToolTipText, text);
-    colors.setColor(QPalette::Disabled, QPalette::Text, muted);
-    colors.setColor(QPalette::Disabled, QPalette::ButtonText, muted);
-    setPalette(colors);
-    const QMap<QString, QString> tokens{
-        {"background", background.name()}, {"text", text.name()}, {"field", field.name()},
-        {"muted", muted.name()}, {"accent", accent.name()},
-        {"hover", dark ? "#2d2d2d" : "#dddddd"}, {"pressed", dark ? "#343434" : "#d0d0d0"},
-        {"border", dark ? "#353535" : "#cbcbcb"}, {"borderStrong", dark ? "#3a3a3a" : "#bfbfbf"},
-        {"selection", dark ? "#245488" : "#d9e9ff"}, {"selectionText", dark ? "#ededed" : "#12385e"},
-        {"subtle", dark ? "#929292" : "#686868"},
-        {"disabled", dark ? "#656565" : "#989898"}, {"menuHover", dark ? "#383838" : "#e1e1e1"},
-        {"menu", dark ? "rgba(37, 37, 37, 242)" : "rgba(249, 249, 249, 242)"},
-        {"incognito", dark ? "#a491ff" : "#6545cc"}
-    };
-    QFile style(":/assets/style.qss");
-    if (style.open(QIODevice::ReadOnly)) {
-        auto css = QString::fromUtf8(style.readAll());
-        for (auto it = tokens.cbegin(); it != tokens.cend(); ++it) css.replace("@" + it.key() + "@", it.value());
-        setStyleSheet(css);
-    }
-    for (auto *button : findChildren<QToolButton *>()) {
-        const auto name = button->property("neoIcon").toString();
-        if (!name.isEmpty()) button->setIcon(neoIcon(name, text));
-    }
-    for (auto *action : findChildren<QAction *>()) {
-        const auto name = action->property("neoIcon").toString();
-        if (!name.isEmpty()) action->setIcon(neoIcon(name, text));
-    }
-    for (auto *combo : findChildren<QComboBox *>("themeSelector")) {
-        const QStringList icons{"device", "sun", "moon"};
-        for (int i = 0; i < icons.size(); ++i) combo->setItemIcon(i, neoIcon(icons.at(i), text));
-    }
-    for (auto *view : findChildren<QWebEngineView *>()) view->page()->setBackgroundColor(background);
-#ifdef Q_OS_WIN
-    const BOOL darkTitle = dark;
-    DwmSetWindowAttribute(reinterpret_cast<HWND>(winId()), 20, &darkTitle, sizeof(darkTitle));
-#endif
+    applyUiTheme(this, settings.value("appearance/theme", "system").toString());
 }
 
 QStackedWidget *BrowserWindow::activeStack() const { return qobject_cast<QStackedWidget *>(pages->currentWidget()); }
@@ -298,6 +240,7 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     stack->setProperty("sessionUrl", url.toString());
     auto *home = new HomePage(incognito, stack);
     home->setWeatherEnabled(settings.value("weather/enabled", true).toBool());
+    home->setMailVisible(prefs.showMailButton);
     if (weatherFailed) home->showWeatherError();
     else if (latestWeather) home->showWeather(*latestWeather);
     stack->addWidget(home);
@@ -305,6 +248,7 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     auto *page = new QWebEnginePage(incognito ? privateProfile : regularProfile, view);
     page->setBackgroundColor(palette().color(QPalette::Window));
     view->setPage(page);
+    view->setZoomFactor(prefs.zoomPercent / 100.0);
     stack->addWidget(view);
     const int index = pages->addWidget(stack);
     tabs->addTab(incognito ? tr("Инкогнито") : tr("Новая вкладка"));
@@ -324,6 +268,10 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
         navigate(text);
     });
     connect(home, &HomePage::refreshWeather, &weather, &WeatherService::refresh);
+    connect(home, &HomePage::mailRequested, this, [this, stack] {
+        tabs->setCurrentIndex(pages->indexOf(stack));
+        navigate(mailUrl(settings).toString());
+    });
     connect(view, &QWebEngineView::urlChanged, this, [this, stack](const QUrl &target) {
         stack->setProperty("sessionUrl", target.toString());
         tabs->setTabToolTip(pages->indexOf(stack), target.toDisplayString());
@@ -356,13 +304,13 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     });
     connect(page, &QWebEnginePage::permissionRequested, this, [this](QWebEnginePermission permission) {
         const auto type = permission.permissionType();
-        QString feature;
-        if (type == QWebEnginePermission::PermissionType::Geolocation) feature = tr("местоположению");
-        else if (type == QWebEnginePermission::PermissionType::MediaAudioCapture) feature = tr("микрофону");
-        else if (type == QWebEnginePermission::PermissionType::MediaVideoCapture) feature = tr("камере");
+        QString feature, rule;
+        if (type == QWebEnginePermission::PermissionType::Geolocation) { feature = tr("местоположению"); rule = prefs.geolocation; }
+        else if (type == QWebEnginePermission::PermissionType::MediaAudioCapture) { feature = tr("микрофону"); rule = prefs.microphone; }
+        else if (type == QWebEnginePermission::PermissionType::MediaVideoCapture) { feature = tr("камере"); rule = prefs.camera; }
         else { permission.deny(); return; }
-        if (QMessageBox::question(this, tr("Разрешение сайта"), tr("Разрешить %1 доступ к %2?")
-                .arg(permission.origin().host(), feature), QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes) permission.grant();
+        if (rule == "block") { permission.deny(); return; }
+        if (askYesNo(this, tr("Разрешение сайта"), tr("Разрешить %1 доступ к %2?").arg(permission.origin().host(), feature))) permission.grant();
         else permission.deny();
     });
     tabs->parentWidget()->layout()->activate();
@@ -470,42 +418,45 @@ void BrowserWindow::showMenu()
 
 void BrowserWindow::showSettings()
 {
-    QDialog dialog(this);
-    dialog.setWindowTitle(tr("Настройки"));
-    dialog.setMinimumWidth(420);
-    auto *layout = new QFormLayout(&dialog);
-    layout->setContentsMargins(24, 24, 24, 24);
-    layout->setSpacing(18);
-    auto *engine = new QComboBox(&dialog);
-    engine->addItems({"Google", "DuckDuckGo", tr("Яндекс"), "Bing", "Brave"});
-    engine->setCurrentText(settings.value("search/engine", "Google").toString());
-    layout->addRow(tr("Поисковая система"), engine);
-    auto *theme = new QComboBox(&dialog);
-    theme->setObjectName("themeSelector");
-    const auto iconColor = palette().color(QPalette::Text);
-    theme->addItem(neoIcon("device", iconColor), tr("Как на устройстве"), "system");
-    theme->addItem(neoIcon("sun", iconColor), tr("Светлая"), "light");
-    theme->addItem(neoIcon("moon", iconColor), tr("Тёмная"), "dark");
-    theme->setCurrentIndex(qMax(0, theme->findData(settings.value("appearance/theme", "system"))));
-    layout->insertRow(0, tr("Оформление"), theme);
-    auto *weatherToggle = new QCheckBox(tr("Погода на главной"), &dialog);
-    weatherToggle->setChecked(settings.value("weather/enabled", true).toBool());
-    layout->addRow(weatherToggle);
-    auto *note = new QLabel(tr("Регион определяется по IP-адресу. VPN может изменить регион.\nДанные: Open-Meteo. Геолокация: ipwho.is."), &dialog);
-    note->setWordWrap(true);
-    layout->addRow(note);
-    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, &dialog);
-    layout->addRow(buttons);
-    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    if (dialog.exec() == QDialog::Accepted) {
-        settings.setValue("search/engine", engine->currentText());
-        settings.setValue("appearance/theme", theme->currentData());
-        applyTheme();
-        settings.setValue("weather/enabled", weatherToggle->isChecked());
-        for (auto *home : findChildren<HomePage *>()) home->setWeatherEnabled(weatherToggle->isChecked());
-        weather.setEnabled(weatherToggle->isChecked());
-    }
+    SettingsDialog dialog(settings, regularProfile, this);
+    if (dialog.exec() != QDialog::Accepted) return;
+    const int previousZoom = prefs.zoomPercent;
+    if (!dialog.wasReset()) dialog.save();
+    settings.sync();
+    applyTheme();
+    applyPreferences();
+    const bool weatherOn = settings.value("weather/enabled", true).toBool();
+    for (auto *home : findChildren<HomePage *>()) home->setWeatherEnabled(weatherOn);
+    weather.setEnabled(weatherOn);
+    if (prefs.zoomPercent != previousZoom)
+        for (auto *view : findChildren<QWebEngineView *>()) view->setZoomFactor(prefs.zoomPercent / 100.0);
+}
+
+void BrowserWindow::applyPreferences()
+{
+    prefs = Preferences::load(settings);
+    applyProfilePreferences(regularProfile);
+    applyProfilePreferences(privateProfile);
+    findChild<QToolButton *>("homeButton")->setVisible(prefs.showHomeButton);
+    for (auto *home : findChildren<HomePage *>()) home->setMailVisible(prefs.showMailButton);
+}
+
+void BrowserWindow::applyProfilePreferences(QWebEngineProfile *profile)
+{
+    auto *web = profile->settings();
+    web->setAttribute(QWebEngineSettings::JavascriptEnabled, prefs.javascript);
+    web->setAttribute(QWebEngineSettings::AutoLoadImages, prefs.images);
+    web->setAttribute(QWebEngineSettings::JavascriptCanOpenWindows, prefs.popups);
+    web->setAttribute(QWebEngineSettings::PlaybackRequiresUserGesture, !prefs.autoplay);
+    web->setAttribute(QWebEngineSettings::ScrollAnimatorEnabled, prefs.smoothScroll);
+    web->setAttribute(QWebEngineSettings::ForceDarkMode, prefs.forceDark);
+    web->setFontSize(QWebEngineSettings::DefaultFontSize, prefs.fontSize);
+    web->setFontSize(QWebEngineSettings::MinimumFontSize, prefs.minimumFontSize);
+    if (!profile->isOffTheRecord())
+        profile->setPersistentCookiesPolicy(prefs.keepCookies ? QWebEngineProfile::AllowPersistentCookies : QWebEngineProfile::NoPersistentCookies);
+    if (prefs.blockThirdPartyCookies)
+        profile->cookieStore()->setCookieFilter([](const QWebEngineCookieStore::FilterRequest &request) { return !request.thirdParty; });
+    else profile->cookieStore()->setCookieFilter({});
 }
 
 void BrowserWindow::bookmarkPage()
@@ -540,6 +491,7 @@ void BrowserWindow::showLibrary(bool history)
     if (items.isEmpty()) layout->addWidget(new QLabel(history ? tr("История пока пуста") : tr("Сохранённых страниц пока нет"), &dialog));
     layout->addWidget(list);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    localizeButtons(buttons);
     auto *remove = buttons->addButton(tr("Удалить"), QDialogButtonBox::ActionRole);
     connect(remove, &QPushButton::clicked, &dialog, [&] {
         const int index = list->currentRow();
@@ -560,16 +512,25 @@ void BrowserWindow::showLibrary(bool history)
 void BrowserWindow::findInPage()
 {
     if (activeStack()->currentIndex() == 0) return;
-    bool ok = false;
-    const auto text = QInputDialog::getText(this, tr("Найти на странице"), tr("Текст"), QLineEdit::Normal, {}, &ok);
-    if (ok) activeView()->findText(text);
+    QInputDialog input(this);
+    input.setWindowTitle(tr("Найти на странице"));
+    input.setLabelText(tr("Текст"));
+    input.setOkButtonText(tr("Найти"));
+    input.setCancelButtonText(tr("Отмена"));
+    if (input.exec() == QDialog::Accepted) activeView()->findText(input.textValue());
 }
 
 void BrowserWindow::configureProfile(QWebEngineProfile *profile)
 {
     connect(profile, &QWebEngineProfile::downloadRequested, this, [this](QWebEngineDownloadRequest *download) {
-        const auto path = QFileDialog::getSaveFileName(this, tr("Сохранить файл"),
-            QStandardPaths::writableLocation(QStandardPaths::DownloadLocation) + "/" + download->suggestedFileName());
+        QString path = prefs.downloadFolder + "/" + download->suggestedFileName();
+        if (prefs.askDownloadLocation) path = QFileDialog::getSaveFileName(this, tr("Сохранить файл"), path);
+        else {
+            // Silent downloads must never overwrite an existing file.
+            const QFileInfo target(path);
+            for (int copy = 1; QFile::exists(path); ++copy)
+                path = target.absolutePath() + "/" + target.completeBaseName() + QString(" (%1)").arg(copy) + (target.suffix().isEmpty() ? QString() : "." + target.suffix());
+        }
         if (path.isEmpty()) { download->cancel(); return; }
         download->setDownloadDirectory(QFileInfo(path).absolutePath());
         download->setDownloadFileName(QFileInfo(path).fileName());
@@ -580,6 +541,7 @@ void BrowserWindow::configureProfile(QWebEngineProfile *profile)
         download->accept();
         statusBar()->showMessage(tr("Загрузка: %1").arg(QFileInfo(path).fileName()), 4000);
     });
+    applyProfilePreferences(profile);
 }
 
 void BrowserWindow::saveSession()
@@ -598,4 +560,9 @@ void BrowserWindow::saveSession()
     settings.sync();
 }
 
-void BrowserWindow::closeEvent(QCloseEvent *event) { saveSession(); QMainWindow::closeEvent(event); }
+void BrowserWindow::closeEvent(QCloseEvent *event)
+{
+    saveSession();
+    if (prefs.clearHistoryOnExit) { settings.remove("history"); settings.sync(); }
+    QMainWindow::closeEvent(event);
+}

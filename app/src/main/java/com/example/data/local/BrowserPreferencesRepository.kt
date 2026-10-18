@@ -26,6 +26,7 @@ data class BrowserPreferencesState(
   val whitelistedDomains: Set<String> = emptySet(),
   val readerFontSizeSp: Int = 18,
   val readerTheme: ReaderTheme = ReaderTheme.GRAPHITE,
+  val onboardingCompleted: Boolean = false,
 )
 
 class BrowserPreferencesRepository(private val context: Context) {
@@ -41,6 +42,7 @@ class BrowserPreferencesRepository(private val context: Context) {
     val WHITELISTED_DOMAINS = stringSetPreferencesKey("whitelisted_domains")
     val READER_FONT_SIZE = intPreferencesKey("reader_font_size_sp")
     val READER_THEME = stringPreferencesKey("reader_theme")
+    val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
   }
 
   val preferencesFlow: Flow<BrowserPreferencesState> = context.browserDataStore.data.map { prefs ->
@@ -54,7 +56,8 @@ class BrowserPreferencesRepository(private val context: Context) {
       totalTrackersBlocked = prefs[Keys.TOTAL_TRACKERS_BLOCKED] ?: 0,
       whitelistedDomains = prefs[Keys.WHITELISTED_DOMAINS] ?: emptySet(),
       readerFontSizeSp = (prefs[Keys.READER_FONT_SIZE] ?: 18).coerceIn(14, 28),
-      readerTheme = ReaderTheme.fromId(prefs[Keys.READER_THEME] ?: ReaderTheme.GRAPHITE.id)
+      readerTheme = ReaderTheme.fromId(prefs[Keys.READER_THEME] ?: ReaderTheme.GRAPHITE.id),
+      onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false
     )
   }
 
@@ -112,6 +115,10 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   suspend fun setReaderFontSize(sizeSp: Int) {
     context.browserDataStore.edit { it[Keys.READER_FONT_SIZE] = sizeSp.coerceIn(14, 28) }
+  }
+
+  suspend fun setOnboardingCompleted() {
+    context.browserDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
   }
 
   suspend fun setReaderTheme(theme: ReaderTheme) {

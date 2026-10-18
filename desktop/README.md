@@ -14,6 +14,16 @@ From PowerShell:
 
 The script initializes MSVC, builds the browser, runs QtTest and packages the Qt runtime. Launch `desktop/dist/NeoSerf/bin/NeoSerf.exe`. Copy the **whole NeoSerf folder**, including resources, plugins, translations and bin. The EXE alone is not a portable browser.
 
+### Installer
+
+After `build.ps1`, build the Windows installer with [Inno Setup 6](https://jrsoftware.org/isdl.php):
+
+```powershell
+.\desktop\installer\build.ps1
+```
+
+It writes `desktop/dist/installer/NeoSerf-Setup-<version>-x64.exe`. The installer is per-user by default (no administrator prompt), adds a Start menu shortcut, an optional desktop shortcut and an uninstaller. Desktop CI builds it on every run; for a `v*` tag it is attached to the GitHub Release next to the Android APK.
+
 Generic CMake build (use an MSVC developer shell on Windows):
 
 ```sh
@@ -27,6 +37,10 @@ cmake --install desktop/build --config Release --prefix /absolute/path/to/packag
 
 - Compact tabs above the address bar, with the active tab joining the navigation surface. The new-tab button stays next to the tab strip; excess tabs scroll. Dragging tabs also reorders the restored session.
 
+- First launch shows a two-step welcome screen with an animated slide between steps. Step 1: theme (previewed live), interface language (Russian or English, applied from the next launch) and import of bookmarks and up to 500 history pages from Chrome, Opera, Opera GX or Yandex Browser. History is read from a private copy, so a running browser does not block the import. Passwords, logins and extensions are not imported. Skipping is fine; import is also under Settings → Перенос данных. Step 2: default search engine and default mail.
+- "Почта" link in the top-right corner of the home page (under the navigation bar) opens the default mail service (Gmail unless changed in Settings → Поиск и почта; Yandex Mail, Outlook, Mail.ru or any HTTPS address).
+- An arrow button inside the address bar and the home search submits the text (shown while there is text). There is no clear button.
+- Settings use a Chrome-style sidebar: appearance and language, search and mail, startup (restore tabs or new tab), privacy (keep/block third-party cookies, clear history on exit, clear browsing data), sites (JavaScript, images, pop-ups, autoplay, smooth scrolling, dark mode for pages, location/camera/microphone rules), fonts and zoom, downloads (ask or save to a folder), data import, and reset. Chrome has hundreds of switches; NeoSerf offers the ones Qt WebEngine can really apply and does not show controls that do nothing.
 - Settings → Оформление: follow the system (default), light or dark. The system mode updates an open window when the device theme changes; manual choices persist. SVG action icons, menus, dialogs, form controls and the title bar use the selected palette.
 
 - Real web browsing, back/forward, reload, home, multiple tabs and new-tab links.

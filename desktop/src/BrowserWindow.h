@@ -1,4 +1,5 @@
 #pragma once
+#include "Preferences.h"
 #include "WeatherService.h"
 #include <QMainWindow>
 #include <QSettings>
@@ -31,12 +32,15 @@ private:
     void showMenu();
     void showSettings();
     void applyTheme();
+    void applyPreferences();
+    void applyProfilePreferences(QWebEngineProfile *profile);
     void showLibrary(bool history);
     void bookmarkPage();
     void findInPage();
     void configureProfile(QWebEngineProfile *profile);
     void saveSession();
     QSettings settings;
+    Preferences prefs;
     QTabBar *tabs;
     QStackedWidget *pages;
     QToolBar *toolbar;

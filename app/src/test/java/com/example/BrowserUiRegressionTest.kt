@@ -48,7 +48,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "w360dp-h720dp-xhdpi")
 class BrowserUiRegressionTest {
-  @get:Rule val composeRule = createAndroidComposeRule<MainActivity>()
+  @get:Rule(order = 0) val onboardingDone = OnboardingDoneRule()
+  @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
 
   @Test fun hardwareEnterNavigatesWithoutOpeningSearchSettings() {
     composeRule.onNodeWithTag("omnibox_input").performClick().performTextInput("example.com")
@@ -162,7 +163,8 @@ class BrowserUiRegressionTest {
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "w720dp-h1280dp-mdpi")
 class BrowserUiRegressionWideTest {
-  @get:Rule val composeRule = createAndroidComposeRule<MainActivity>()
+  @get:Rule(order = 0) val onboardingDone = OnboardingDoneRule()
+  @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
   @Test fun homeAndTabsFitWideWidth() {
     composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
