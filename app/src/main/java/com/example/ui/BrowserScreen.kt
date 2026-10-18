@@ -51,6 +51,7 @@ import com.example.ui.components.HistorySheet
 import com.example.ui.components.PasswordVaultSheet
 import com.example.ui.components.ReaderModeOverlay
 import com.example.ui.components.StartPageContent
+import com.example.ui.components.SettingsModalSheet
 import com.example.ui.components.TabsModalSheet
 import com.example.ui.components.TopOmniboxBar
 import com.example.ui.viewmodel.BrowserViewModel
@@ -67,6 +68,7 @@ private enum class ActiveModal {
   TABS,
   SHIELD,
   MENU_CUSTOMIZE,
+  SETTINGS,
   BOOKMARKS,
   PASSWORDS,
   HISTORY
@@ -423,35 +425,15 @@ fun BrowserScreen(
   BrowserMenuPopup(
     expanded = activeModal == ActiveModal.MENU_CUSTOMIZE,
     activeTab = activeTab,
-    preferences = preferences,
-    userEmail = userEmail,
-    cloudSyncAvailable = cloudSyncAvailable,
     onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
     onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
     onOpenHistory = { activeModal = ActiveModal.HISTORY },
     onToggleDesktopMode = viewModel::toggleDesktopMode,
     onToggleReaderMode = viewModel::toggleReaderMode,
-    onSelectSearchEngine = viewModel::selectSearchEngine,
     onAutofillActiveSite = viewModel::autofillMatchingSiteForActiveTab,
-    onSetShowWeather = viewModel::setShowWeatherWidget,
-    onSetShowSpeedDial = viewModel::setShowSpeedDial,
-    onSetAppTheme = viewModel::setAppTheme,
     onOpenShield = { activeModal = ActiveModal.SHIELD },
+    onOpenSettings = { activeModal = ActiveModal.SETTINGS },
     onNewTab = { incognito -> viewModel.createNewTab(isIncognito = incognito) },
-    onRefreshWeather = { viewModel.refreshWeather() },
-    onRequestLocation = { locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) },
-    onSignOut = {
-      val manager = credentialManager
-      if (manager != null) {
-        signOutUser(
-          credentialManager = manager,
-          onSignOutComplete = onSignedOut,
-          scope = scope
-        )
-      } else {
-        onSignedOut()
-      }
-    },
     onDismiss = { activeModal = ActiveModal.NONE }
   )
 
@@ -483,6 +465,33 @@ fun BrowserScreen(
     }
 
     ActiveModal.MENU_CUSTOMIZE -> Unit
+
+    ActiveModal.SETTINGS -> {
+      SettingsModalSheet(
+        preferences = preferences,
+        userEmail = userEmail,
+        cloudSyncAvailable = cloudSyncAvailable,
+        onSelectSearchEngine = viewModel::selectSearchEngine,
+        onSetShowWeather = viewModel::setShowWeatherWidget,
+        onSetShowSpeedDial = viewModel::setShowSpeedDial,
+        onSetAppTheme = viewModel::setAppTheme,
+        onRefreshWeather = { viewModel.refreshWeather() },
+        onRequestLocation = { locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) },
+        onSignOut = {
+          val manager = credentialManager
+          if (manager != null) {
+            signOutUser(
+              credentialManager = manager,
+              onSignOutComplete = onSignedOut,
+              scope = scope
+            )
+          } else {
+            onSignedOut()
+          }
+        },
+        onDismiss = { activeModal = ActiveModal.NONE }
+      )
+    }
 
     ActiveModal.BOOKMARKS -> {
       BookmarksSheet(

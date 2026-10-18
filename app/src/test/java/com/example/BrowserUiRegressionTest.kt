@@ -29,6 +29,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -87,12 +88,13 @@ class BrowserUiRegressionTest {
     assertTrue(popup.width < home.width)
     assertTrue(popup.height < home.height)
     composeRule.onNodeWithTag("menu_settings").performClick()
-    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").performClick()
+    // Settings is a bottom sheet now, taller than the test screen, so scroll to each control first.
+    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").performScrollTo().performClick()
     composeRule.waitUntil(5_000) {
       composeRule.onAllNodes(hasTestTag("settings_engine_DuckDuckGo") and isSelected()).fetchSemanticsNodes().isNotEmpty()
     }
     composeRule.onNodeWithTag("settings_engine_DuckDuckGo").assertIsSelected()
-    composeRule.onNodeWithTag("settings_weather").assertIsDisplayed()
+    composeRule.onNodeWithTag("settings_weather").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -140,14 +142,14 @@ class BrowserUiRegressionTest {
       composeRule.onNodeWithTag("menu_settings").performClick()
     }
     openSettings()
-    composeRule.onNodeWithTag("settings_theme_LIGHT").performClick()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performScrollTo().performClick()
     composeRule.waitUntil(5_000) {
       composeRule.onAllNodes(hasTestTag("settings_theme_LIGHT") and isSelected()).fetchSemanticsNodes().isNotEmpty()
     }
     composeRule.activityRule.scenario.recreate()
     openSettings()
-    composeRule.onNodeWithTag("settings_theme_LIGHT").assertIsSelected()
-    composeRule.onNodeWithTag("settings_theme_SYSTEM").performClick()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performScrollTo().assertIsSelected()
+    composeRule.onNodeWithTag("settings_theme_SYSTEM").performScrollTo().performClick()
   }
 
   @Test fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
