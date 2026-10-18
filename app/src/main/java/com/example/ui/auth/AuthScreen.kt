@@ -65,6 +65,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.example.R
+import com.example.data.remote.FirebaseAvailability
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -90,6 +91,10 @@ fun attemptAutoSignIn(
   onUnauthenticated: () -> Unit,
   scope: CoroutineScope,
 ) {
+  if (!FirebaseAvailability.isInitialized(context)) {
+    onUnauthenticated()
+    return
+  }
   if (Firebase.auth.currentUser != null) {
     onAuthSuccess()
     return
@@ -136,6 +141,10 @@ fun onGoogleSignInClicked(
   scope: CoroutineScope,
   onAuthCancelled: () -> Unit = {},
 ) {
+  if (!FirebaseAvailability.isInitialized(context)) {
+    onAuthError(context.getString(R.string.auth_error_missing_config))
+    return
+  }
   val clientId = googleWebClientId(context)
   if (clientId == null) {
     onAuthError(context.getString(R.string.auth_error_missing_config))
@@ -175,7 +184,12 @@ fun signOutUser(
   onSignOutComplete: () -> Unit,
   scope: CoroutineScope,
 ) {
-  Firebase.auth.signOut()
+  try {
+    Firebase.auth.signOut()
+  } catch (_: Exception) {
+    onSignOutComplete()
+    return
+  }
   scope.launch {
     try {
       credentialManager.clearCredentialState(ClearCredentialStateRequest())

@@ -18,10 +18,41 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class BrowserSyncRepository(
+interface BrowserSyncRepository {
+  fun observeBookmarks(userId: String): Flow<List<BookmarkItem>>
+  suspend fun addBookmark(title: String, url: String, folder: String): Result<String>
+  suspend fun getBookmarkById(targetUserId: String, bookmarkId: String): Result<BookmarkItem?>
+  suspend fun deleteBookmark(userId: String, bookmarkId: String): Result<Unit>
+
+  fun observePasswords(userId: String): Flow<List<PasswordEntry>>
+  suspend fun savePasswordEntry(
+    siteDomain: String,
+    siteTitle: String,
+    username: String,
+    encryptedPassword: String,
+    notes: String,
+  ): Result<String>
+  suspend fun deletePasswordEntry(userId: String, passwordId: String): Result<Unit>
+
+  fun observeHistory(userId: String): Flow<List<HistoryEntry>>
+  suspend fun recordHistoryVisit(title: String, url: String, searchEngine: String): Result<String>
+  suspend fun deleteHistoryEntry(userId: String, historyId: String): Result<Unit>
+  suspend fun clearAllHistory(userId: String, entries: List<HistoryEntry>): Result<Unit>
+
+  fun observeSpeedDial(userId: String): Flow<List<SpeedDialTile>>
+  suspend fun addSpeedDialTile(
+    title: String,
+    url: String,
+    category: String,
+    position: Int,
+  ): Result<String>
+  suspend fun deleteSpeedDialTile(userId: String, tileId: String): Result<Unit>
+}
+
+class FirestoreBrowserSyncRepository(
   private val db: FirebaseFirestore,
   private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-) {
+) : BrowserSyncRepository {
   constructor(context: Context) : this(
     FirebaseFirestore.getInstance(
       context.applicationContext.getString(R.string.firestore_database_id)
@@ -36,7 +67,7 @@ class BrowserSyncRepository(
 
   // --- BOOKMARKS ---
 
-  fun observeBookmarks(userId: String): Flow<List<BookmarkItem>> = callbackFlow {
+  override fun observeBookmarks(userId: String): Flow<List<BookmarkItem>> = callbackFlow {
     val path = "users/$userId/bookmarks"
     val registration = db.collection("users").document(userId).collection("bookmarks")
       .whereEqualTo("userId", userId)
@@ -57,7 +88,7 @@ class BrowserSyncRepository(
     awaitClose { registration.remove() }
   }
 
-  suspend fun addBookmark(title: String, url: String, folder: String): Result<String> = runCatching {
+  override suspend fun addBookmark(title: String, url: String, folder: String): Result<String> = runCatching {
     val uid = requireUserId()
     val colRef = db.collection("users").document(uid).collection("bookmarks")
     val docRef = colRef.document()
@@ -80,7 +111,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun getBookmarkById(targetUserId: String, bookmarkId: String): Result<BookmarkItem?> = runCatching {
+  override suspend fun getBookmarkById(targetUserId: String, bookmarkId: String): Result<BookmarkItem?> = runCatching {
     val docRef = db.collection("users").document(targetUserId).collection("bookmarks").document(bookmarkId)
     try {
       docRef.get().await().toObject(BookmarkItem::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
@@ -92,7 +123,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun deleteBookmark(userId: String, bookmarkId: String): Result<Unit> = runCatching {
+  override suspend fun deleteBookmark(userId: String, bookmarkId: String): Result<Unit> = runCatching {
     val docRef = db.collection("users").document(userId).collection("bookmarks").document(bookmarkId)
     try {
       docRef.delete().await()
@@ -106,7 +137,7 @@ class BrowserSyncRepository(
 
   // --- PASSWORDS ---
 
-  fun observePasswords(userId: String): Flow<List<PasswordEntry>> = callbackFlow {
+  override fun observePasswords(userId: String): Flow<List<PasswordEntry>> = callbackFlow {
     val path = "users/$userId/passwords"
     val registration = db.collection("users").document(userId).collection("passwords")
       .whereEqualTo("userId", userId)
@@ -127,7 +158,7 @@ class BrowserSyncRepository(
     awaitClose { registration.remove() }
   }
 
-  suspend fun savePasswordEntry(
+  override suspend fun savePasswordEntry(
     siteDomain: String,
     siteTitle: String,
     username: String,
@@ -157,7 +188,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun deletePasswordEntry(userId: String, passwordId: String): Result<Unit> = runCatching {
+  override suspend fun deletePasswordEntry(userId: String, passwordId: String): Result<Unit> = runCatching {
     val docRef = db.collection("users").document(userId).collection("passwords").document(passwordId)
     try {
       docRef.delete().await()
@@ -171,7 +202,7 @@ class BrowserSyncRepository(
 
   // --- HISTORY ---
 
-  fun observeHistory(userId: String): Flow<List<HistoryEntry>> = callbackFlow {
+  override fun observeHistory(userId: String): Flow<List<HistoryEntry>> = callbackFlow {
     val path = "users/$userId/history"
     val registration = db.collection("users").document(userId).collection("history")
       .whereEqualTo("userId", userId)
@@ -192,7 +223,7 @@ class BrowserSyncRepository(
     awaitClose { registration.remove() }
   }
 
-  suspend fun recordHistoryVisit(
+  override suspend fun recordHistoryVisit(
     title: String,
     url: String,
     searchEngine: String,
@@ -218,7 +249,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun deleteHistoryEntry(userId: String, historyId: String): Result<Unit> = runCatching {
+  override suspend fun deleteHistoryEntry(userId: String, historyId: String): Result<Unit> = runCatching {
     val docRef = db.collection("users").document(userId).collection("history").document(historyId)
     try {
       docRef.delete().await()
@@ -230,7 +261,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun clearAllHistory(userId: String, entries: List<HistoryEntry>): Result<Unit> = runCatching {
+  override suspend fun clearAllHistory(userId: String, entries: List<HistoryEntry>): Result<Unit> = runCatching {
     entries.forEach { item ->
       if (item.id.isNotBlank()) {
         deleteHistoryEntry(userId, item.id).getOrThrow()
@@ -240,7 +271,7 @@ class BrowserSyncRepository(
 
   // --- SPEED DIAL ---
 
-  fun observeSpeedDial(userId: String): Flow<List<SpeedDialTile>> = callbackFlow {
+  override fun observeSpeedDial(userId: String): Flow<List<SpeedDialTile>> = callbackFlow {
     val path = "users/$userId/speed_dial"
     val registration = db.collection("users").document(userId).collection("speed_dial")
       .whereEqualTo("userId", userId)
@@ -261,7 +292,7 @@ class BrowserSyncRepository(
     awaitClose { registration.remove() }
   }
 
-  suspend fun addSpeedDialTile(
+  override suspend fun addSpeedDialTile(
     title: String,
     url: String,
     category: String,
@@ -289,7 +320,7 @@ class BrowserSyncRepository(
     }
   }
 
-  suspend fun deleteSpeedDialTile(userId: String, tileId: String): Result<Unit> = runCatching {
+  override suspend fun deleteSpeedDialTile(userId: String, tileId: String): Result<Unit> = runCatching {
     val docRef = db.collection("users").document(userId).collection("speed_dial").document(tileId)
     try {
       docRef.delete().await()

@@ -151,7 +151,7 @@ object AdBlockerEngine {
   fun createEmptyResourceResponse(): WebResourceResponse {
     return WebResourceResponse(
       "text/plain",
-      "UTF-8",
+      "utf-8",
       ByteArrayInputStream(ByteArray(0))
     )
   }
