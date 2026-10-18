@@ -455,6 +455,7 @@ fun BrowserMenuAndCustomizeSheet(
   activeTab: BrowserTab,
   preferences: BrowserPreferencesState,
   userEmail: String?,
+  cloudSyncAvailable: Boolean = true,
   onOpenBookmarks: () -> Unit,
   onOpenPasswords: () -> Unit,
   onOpenHistory: () -> Unit,
@@ -490,6 +491,12 @@ fun BrowserMenuAndCustomizeSheet(
             text = "Аккаунт Google: $userEmail",
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.secondary
+          )
+        } else if (!cloudSyncAvailable) {
+          Text(
+            text = stringResource(R.string.guest_mode_label),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
           )
         }
       }
@@ -669,30 +676,34 @@ fun BrowserMenuAndCustomizeSheet(
         }
       }
 
-      item {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
-        Spacer(modifier = Modifier.height(6.dp))
-        OutlinedButton(
-          onClick = {
-            onDismiss()
-            onSignOut()
-          },
-          colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = MaterialTheme.colorScheme.error
-          ),
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("sign_out_button")
-        ) {
-          Icon(
-            imageVector = Icons.AutoMirrored.Filled.Logout,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp)
-          )
-          Spacer(modifier = Modifier.width(8.dp))
-          Text(text = stringResource(R.string.auth_sign_out))
+      if (cloudSyncAvailable) {
+        item {
+          HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+          Spacer(modifier = Modifier.height(6.dp))
+          OutlinedButton(
+            onClick = {
+              onDismiss()
+              onSignOut()
+            },
+            colors = ButtonDefaults.outlinedButtonColors(
+              contentColor = MaterialTheme.colorScheme.error
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("sign_out_button")
+          ) {
+            Icon(
+              imageVector = Icons.AutoMirrored.Filled.Logout,
+              contentDescription = null,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = stringResource(R.string.auth_sign_out))
+          }
+          Spacer(modifier = Modifier.height(18.dp))
         }
-        Spacer(modifier = Modifier.height(18.dp))
+      } else {
+        item { Spacer(modifier = Modifier.height(18.dp)) }
       }
     }
   }

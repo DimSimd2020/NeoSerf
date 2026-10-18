@@ -2,7 +2,7 @@
 
 A fast, private Android browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0` (`versionCode` 1).
+**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.1` (`versionCode` 2). Without Firebase config the app opens a local guest browser instead of crashing.
 
 ## Build locally
 
@@ -39,6 +39,7 @@ To sign with your own upload keystore, add these repository secrets (`Settings â
 | `KEYSTORE_PASSWORD` | Keystore password |
 | `KEY_ALIAS` | Key alias |
 | `KEY_PASSWORD` | Key password |
+| `GOOGLE_SERVICES_JSON` | Optional. Raw `google-services.json` (or its base64). When set, CI writes `app/google-services.json` before the build so Firebase Auth/Firestore are configured. |
 
 Encode the keystore (do not commit the file or the encoded value):
 

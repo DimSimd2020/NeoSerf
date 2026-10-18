@@ -13,6 +13,7 @@
     <string name="auth_error_missing_config">Не найден конфигурационный ключ Google Sign-In</string>
     <string name="auth_error_generic">Не удалось выполнить вход</string>
     <string name="auth_sign_out">Выйти из аккаунта</string>
+    <string name="guest_mode_label">Локальный гостевой режим (облако недоступно)</string>
 
     <!-- Omnibox & Top Bar -->
     <string name="omnibox_hint">Введите адрес сайта или поисковый запрос</string>

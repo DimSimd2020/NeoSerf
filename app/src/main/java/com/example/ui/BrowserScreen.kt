@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
@@ -69,11 +70,14 @@ private enum class ActiveModal {
 fun BrowserScreen(
   viewModel: BrowserViewModel,
   userEmail: String?,
+  cloudSyncAvailable: Boolean = true,
   onSignedOut: () -> Unit,
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
-  val credentialManager = remember { CredentialManager.create(context) }
+  val credentialManager = remember(cloudSyncAvailable) {
+    if (cloudSyncAvailable) CredentialManager.create(context) else null
+  }
 
   val preferences by viewModel.preferences.collectAsStateWithLifecycle()
   val tabs by viewModel.tabs.collectAsStateWithLifecycle()
@@ -103,43 +107,40 @@ fun BrowserScreen(
     }
   }
 
-  val webView = remember {
-    WebView(context).apply {
-      layoutParams = ViewGroup.LayoutParams(
-        ViewGroup.LayoutParams.MATCH_PARENT,
-        ViewGroup.LayoutParams.MATCH_PARENT
-      )
-      settings.apply {
-        javaScriptEnabled = true
-        domStorageEnabled = true
-        databaseEnabled = true
-        loadsImagesAutomatically = true
-        mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
-        setSupportZoom(true)
-        builtInZoomControls = true
-        displayZoomControls = false
-      }
-    }
-  }
+  var webView by remember { mutableStateOf<WebView?>(null) }
 
-  DisposableEffect(webView) {
-    webView.webViewClient = object : WebViewClient() {
+  fun attachBrowserClients(target: WebView) {
+    target.webViewClient = object : WebViewClient() {
       override fun shouldInterceptRequest(
         view: WebView?,
         request: WebResourceRequest?,
       ): WebResourceResponse? {
-        val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
-        val category = AdBlockerEngine.classifyRequest(
-          requestUrl = reqUrl,
-          currentPageUrl = currentTabState.url,
-          isAdBlockEnabled = currentPrefsState.adBlockEnabled,
-          whitelistedDomains = currentPrefsState.whitelistedDomains
-        )
-        if (category != BlockCategory.ALLOWED) {
-          viewModel.onRequestBlocked(currentTabState.id, category)
-          return AdBlockerEngine.createEmptyResourceResponse()
+        return try {
+          val reqUrl = request?.url?.toString() ?: return super.shouldInterceptRequest(view, request)
+          val category = AdBlockerEngine.classifyRequest(
+            requestUrl = reqUrl,
+            currentPageUrl = currentTabState.url,
+            isAdBlockEnabled = currentPrefsState.adBlockEnabled,
+            whitelistedDomains = currentPrefsState.whitelistedDomains
+          )
+          if (category != BlockCategory.ALLOWED) {
+            viewModel.onRequestBlocked(currentTabState.id, category)
+            return AdBlockerEngine.createEmptyResourceResponse()
+          }
+          super.shouldInterceptRequest(view, request)
+        } catch (_: Throwable) {
+          super.shouldInterceptRequest(view, request)
         }
-        return super.shouldInterceptRequest(view, request)
+      }
+
+      @Deprecated("Deprecated in Java")
+      override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+        // Old system WebView (API 29 / Chromium 74) still dispatches this overload.
+        return false
+      }
+
+      override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+        return false
       }
 
       override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -152,7 +153,7 @@ fun BrowserScreen(
       override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
         if (currentPrefsState.adBlockEnabled && view != null) {
-          view.evaluateJavascript(AdBlockerEngine.COSMETIC_ADBLOCK_JS, null)
+          view.evaluateJavascriptCompat(AdBlockerEngine.COSMETIC_ADBLOCK_JS, null)
         }
         if (view != null && !url.isNullOrBlank()) {
           viewModel.onWebPageFinished(
@@ -166,62 +167,95 @@ fun BrowserScreen(
       }
     }
 
-    webView.webChromeClient = object : WebChromeClient() {
+    target.webChromeClient = object : WebChromeClient() {
       override fun onProgressChanged(view: WebView?, newProgress: Int) {
         super.onProgressChanged(view, newProgress)
         viewModel.onWebProgressChanged(currentTabState.id, newProgress)
       }
     }
+  }
 
+  fun obtainWebView(ctx: android.content.Context): WebView {
+    val existing = webView
+    if (existing != null) {
+      (existing.parent as? ViewGroup)?.removeView(existing)
+      return existing
+    }
+    val created = WebView(ctx).apply {
+      layoutParams = ViewGroup.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT,
+        ViewGroup.LayoutParams.MATCH_PARENT
+      )
+      applyNeoSerfWebSettings()
+    }
+    attachBrowserClients(created)
+    webView = created
+    return created
+  }
+
+  DisposableEffect(Unit) {
     onDispose {
-      webView.stopLoading()
+      webView?.stopLoading()
     }
   }
 
+  val currentWebView = webView
+
   // Synchronize Desktop Mode & Incognito settings on active tab changes
-  LaunchedEffect(activeTab.id, activeTab.isDesktopMode, activeTab.isIncognito) {
-    webView.settings.apply {
+  LaunchedEffect(currentWebView, activeTab.id, activeTab.isDesktopMode, activeTab.isIncognito) {
+    val wv = currentWebView ?: return@LaunchedEffect
+    wv.settings.apply {
       userAgentString = if (activeTab.isDesktopMode) DESKTOP_USER_AGENT else MOBILE_USER_AGENT
       useWideViewPort = activeTab.isDesktopMode
       loadWithOverviewMode = activeTab.isDesktopMode
       cacheMode = if (activeTab.isIncognito) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_DEFAULT
-      saveFormData = !activeTab.isIncognito
+      try {
+        @Suppress("DEPRECATION")
+        saveFormData = !activeTab.isIncognito
+      } catch (_: Throwable) {
+        // Removed on some WebView builds newer than 74; ignore.
+      }
     }
-    CookieManager.getInstance().setAcceptCookie(!activeTab.isIncognito)
-    if (!activeTab.isStartPage && webView.url != activeTab.url) {
-      webView.loadUrl(activeTab.url)
+    try {
+      CookieManager.getInstance().setAcceptCookie(!activeTab.isIncognito)
+    } catch (_: Throwable) {
+      // CookieManager can throw on a stub / locked WebView process.
+    }
+    if (!activeTab.isStartPage && wv.url != activeTab.url) {
+      wv.loadUrl(activeTab.url)
     }
   }
 
   // Execute one-shot WebView commands from ViewModel
-  LaunchedEffect(viewModel) {
+  LaunchedEffect(viewModel, currentWebView) {
+    val wv = currentWebView ?: return@LaunchedEffect
     viewModel.webViewCommands.collect { command ->
       when (command) {
         is WebViewCommand.LoadUrl -> {
-          webView.loadUrl(command.url)
+          wv.loadUrl(command.url)
         }
 
         is WebViewCommand.Reload -> {
-          webView.reload()
+          wv.reload()
         }
 
         is WebViewCommand.GoBack -> {
-          if (webView.canGoBack()) {
-            webView.goBack()
+          if (wv.canGoBack()) {
+            wv.goBack()
           } else {
             viewModel.navigateHome()
           }
         }
 
         is WebViewCommand.GoForward -> {
-          if (webView.canGoForward()) {
-            webView.goForward()
+          if (wv.canGoForward()) {
+            wv.goForward()
           }
         }
 
         is WebViewCommand.ExtractReaderContent -> {
           val tabSnapshot = currentTabState
-          webView.evaluateJavascript(AdBlockerEngine.READER_EXTRACTION_JS) { rawJson ->
+          wv.evaluateJavascriptCompat(AdBlockerEngine.READER_EXTRACTION_JS) { rawJson ->
             val article = AdBlockerEngine.parseReaderArticleJson(
               rawEvaluateResult = rawJson,
               fallbackTitle = tabSnapshot.title,
@@ -233,7 +267,7 @@ fun BrowserScreen(
 
         is WebViewCommand.AutofillCredentials -> {
           val js = AdBlockerEngine.buildAutofillJs(command.username, command.plainPassword)
-          webView.evaluateJavascript(js, null)
+          wv.evaluateJavascriptCompat(js, null)
         }
       }
     }
@@ -243,7 +277,7 @@ fun BrowserScreen(
     when {
       activeModal != ActiveModal.NONE -> activeModal = ActiveModal.NONE
       activeTab.isReaderMode -> viewModel.toggleReaderMode()
-      webView.canGoBack() -> webView.goBack()
+      currentWebView?.canGoBack() == true -> currentWebView.goBack()
       else -> viewModel.navigateHome()
     }
   }
@@ -321,7 +355,7 @@ fun BrowserScreen(
 
         else -> {
           AndroidView(
-            factory = { webView },
+            factory = { ctx -> obtainWebView(ctx) },
             modifier = Modifier.fillMaxSize()
           )
         }
@@ -361,6 +395,7 @@ fun BrowserScreen(
         activeTab = activeTab,
         preferences = preferences,
         userEmail = userEmail,
+        cloudSyncAvailable = cloudSyncAvailable,
         onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
         onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
         onOpenHistory = { activeModal = ActiveModal.HISTORY },
@@ -372,11 +407,16 @@ fun BrowserScreen(
         onSetShowSpeedDial = viewModel::setShowSpeedDial,
         onSetShowShieldSummary = viewModel::setShowShieldSummary,
         onSignOut = {
-          signOutUser(
-            credentialManager = credentialManager,
-            onSignOutComplete = onSignedOut,
-            scope = scope
-          )
+          val manager = credentialManager
+          if (manager != null) {
+            signOutUser(
+              credentialManager = manager,
+              onSignOutComplete = onSignedOut,
+              scope = scope
+            )
+          } else {
+            onSignedOut()
+          }
         },
         onDismiss = { activeModal = ActiveModal.NONE }
       )
@@ -415,5 +455,40 @@ fun BrowserScreen(
         onDismiss = { activeModal = ActiveModal.NONE }
       )
     }
+  }
+}
+
+/**
+ * Settings that exist on system WebView 74 (API 29). Do not call setForceDark,
+ * setAlgorithmicDarkeningAllowed, or androidx.webkit helpers without feature checks —
+ * those APIs are missing or crash on Chromium 74.
+ */
+private fun WebView.applyNeoSerfWebSettings() {
+  settings.apply {
+    javaScriptEnabled = true
+    domStorageEnabled = true
+    loadsImagesAutomatically = true
+    setSupportZoom(true)
+    builtInZoomControls = true
+    displayZoomControls = false
+    try {
+      mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+    } catch (_: Throwable) {
+      // MIXED_CONTENT_* landed in API 21; some vendor WebView stubs still throw.
+    }
+    try {
+      @Suppress("DEPRECATION")
+      databaseEnabled = true
+    } catch (_: Throwable) {
+      // Removed or no-op on some Chromium builds.
+    }
+  }
+}
+
+private fun WebView.evaluateJavascriptCompat(script: String, callback: ValueCallback<String>?) {
+  try {
+    evaluateJavascript(script, callback)
+  } catch (_: Throwable) {
+    callback?.onReceiveValue(null)
   }
 }

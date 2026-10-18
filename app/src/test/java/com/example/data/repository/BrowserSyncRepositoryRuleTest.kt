@@ -16,7 +16,7 @@ class BrowserSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
   @Test
   fun addAndObserveBookmark_authenticatedOwner_succeeds() = runBlocking {
     val aliceUid = signInTestUser(ALICE_EMAIL)
-    val repository = BrowserSyncRepository(firestore, auth)
+    val repository = FirestoreBrowserSyncRepository(firestore, auth)
 
     val createResult = withTimeout(DEFAULT_TIMEOUT_MS) {
       repository.addBookmark(
@@ -37,7 +37,7 @@ class BrowserSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
   @Test
   fun saveAndObservePassword_authenticatedOwner_succeeds() = runBlocking {
     val aliceUid = signInTestUser(ALICE_EMAIL)
-    val repository = BrowserSyncRepository(firestore, auth)
+    val repository = FirestoreBrowserSyncRepository(firestore, auth)
 
     val saveResult = withTimeout(DEFAULT_TIMEOUT_MS) {
       repository.savePasswordEntry(
@@ -60,13 +60,13 @@ class BrowserSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
   @Test
   fun getBookmarkById_crossUserAccess_failsWithPermissionDenied() = runBlocking {
     val aliceUid = signInTestUser(ALICE_EMAIL)
-    val aliceRepo = BrowserSyncRepository(firestore, auth)
+    val aliceRepo = FirestoreBrowserSyncRepository(firestore, auth)
     val bookmarkId = withTimeout(DEFAULT_TIMEOUT_MS) {
       aliceRepo.addBookmark("Private Doc", "https://secret.example.com", "Личное").getOrThrow()
     }
 
     signInTestUser(BOB_EMAIL)
-    val bobRepo = BrowserSyncRepository(firestore, auth)
+    val bobRepo = FirestoreBrowserSyncRepository(firestore, auth)
     val crossReadResult = withTimeout(DEFAULT_TIMEOUT_MS) {
       bobRepo.getBookmarkById(aliceUid, bookmarkId)
     }
@@ -80,7 +80,7 @@ class BrowserSyncRepositoryRuleTest : FirestoreEmulatorTestBase() {
   fun observeBookmarks_unauthenticatedUser_failsWithPermissionDenied() = runBlocking {
     val aliceUid = signInTestUser(ALICE_EMAIL)
     auth.signOut()
-    val repository = BrowserSyncRepository(firestore, auth)
+    val repository = FirestoreBrowserSyncRepository(firestore, auth)
 
     try {
       withTimeout(FLOW_TIMEOUT_MS) {
