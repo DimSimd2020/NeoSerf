@@ -1,6 +1,9 @@
 #include "BrowserWindow.h"
 #include "AddressResolver.h"
 #include "HomePage.h"
+#include "UiAssets.h"
+#include <QApplication>
+#include <QStyleHints>
 #include <QAction>
 #include <QCheckBox>
 #include <QCloseEvent>
@@ -45,16 +48,14 @@
 BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(this)
 {
     Q_INIT_RESOURCE(resources);
-    QFile style(":/assets/style.qss");
-    if (style.open(QIODevice::ReadOnly)) setStyleSheet(QString::fromUtf8(style.readAll()));
     setWindowTitle("NeoSerf");
     setWindowIcon(QIcon(":/assets/logo.svg"));
     resize(1180, 800);
     setMinimumSize(640, 480);
-#ifdef Q_OS_WIN
-    const BOOL dark = TRUE;
-    DwmSetWindowAttribute(reinterpret_cast<HWND>(winId()), 20, &dark, sizeof(dark));
-#endif
+    applyTheme();
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] {
+        if (settings.value("appearance/theme", "system") == "system") applyTheme();
+    });
     regularProfile = new QWebEngineProfile("NeoSerf", this);
     const auto storage = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     regularProfile->setPersistentStoragePath(storage + "/web");
@@ -72,7 +73,8 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
         Q_UNUSED(text);
         auto iconName = name;
         iconName.remove("Button");
-        button->setIcon(QIcon(":/assets/icons/" + iconName + ".svg"));
+        button->setProperty("neoIcon", iconName);
+        button->setIcon(neoIcon(iconName, palette().color(QPalette::Text)));
         button->setIconSize(QSize(20, 20));
         button->setToolTip(tip);
         button->setAccessibleName(tip);
@@ -95,7 +97,7 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     address->setObjectName("addressBar");
     address->setPlaceholderText(tr("Поиск или адрес сайта"));
     address->setAccessibleName(tr("Адресная строка"));
-    address->setClearButtonEnabled(true);
+    addClearButton(address);
     toolbar->addWidget(address);
     connect(address, &QLineEdit::returnPressed, this, [this] { navigate(address->text()); });
     addButton(QString::fromUtf8("☆"), tr("Сохранить в закладки · Ctrl+D"), "bookmarkButton", [this] { bookmarkPage(); });
@@ -112,18 +114,18 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     layout->addWidget(progress);
     tabs = new QTabWidget(central);
     tabs->setObjectName("browserTabs");
-    tabs->setTabsClosable(true);
+    tabs->setTabsClosable(false);
     tabs->setMovable(true);
     tabs->tabBar()->setExpanding(false);
     auto *newButton = new QToolButton(tabs);
-    newButton->setIcon(QIcon(":/assets/icons/plus.svg"));
+    newButton->setProperty("neoIcon", "plus");
+    newButton->setIcon(neoIcon("plus", palette().color(QPalette::Text)));
     newButton->setToolTip(tr("Новая вкладка · Ctrl+T"));
     newButton->setAccessibleName(tr("Новая вкладка"));
     newButton->setObjectName("newTabButton");
     tabs->setCornerWidget(newButton, Qt::TopRightCorner);
     connect(newButton, &QToolButton::clicked, this, [this] { newTab(); });
     connect(tabs, &QTabWidget::currentChanged, this, [this] { updateChrome(); });
-    connect(tabs, &QTabWidget::tabCloseRequested, this, &BrowserWindow::closeTab);
     layout->addWidget(tabs);
     setCentralWidget(central);
     statusBar()->setSizeGripEnabled(false);
@@ -176,6 +178,69 @@ BrowserWindow::~BrowserWindow()
     delete privateProfile;
 }
 
+void BrowserWindow::applyTheme()
+{
+    const auto mode = settings.value("appearance/theme", "system").toString();
+    const bool dark = mode == "dark" || (mode == "system" &&
+        QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark);
+    setProperty("darkTheme", dark);
+    const QColor background(dark ? "#191919" : "#f3f3f3");
+    const QColor text(dark ? "#ededed" : "#1b1b1b");
+    const QColor muted(dark ? "#a3a3a3" : "#606060");
+    const QColor field(dark ? "#252525" : "#e6e6e6");
+    const QColor accent(dark ? "#459fff" : "#166ad8");
+    auto colors = palette();
+    colors.setColor(QPalette::Window, background);
+    colors.setColor(QPalette::WindowText, text);
+    colors.setColor(QPalette::Base, field);
+    colors.setColor(QPalette::AlternateBase, background);
+    colors.setColor(QPalette::Text, text);
+    colors.setColor(QPalette::Button, field);
+    colors.setColor(QPalette::ButtonText, text);
+    colors.setColor(QPalette::Highlight, accent);
+    colors.setColor(QPalette::HighlightedText, Qt::white);
+    colors.setColor(QPalette::PlaceholderText, muted);
+    colors.setColor(QPalette::ToolTipBase, field);
+    colors.setColor(QPalette::ToolTipText, text);
+    colors.setColor(QPalette::Disabled, QPalette::Text, muted);
+    colors.setColor(QPalette::Disabled, QPalette::ButtonText, muted);
+    setPalette(colors);
+    const QMap<QString, QString> tokens{
+        {"background", background.name()}, {"text", text.name()}, {"field", field.name()},
+        {"muted", muted.name()}, {"accent", accent.name()},
+        {"hover", dark ? "#2d2d2d" : "#dddddd"}, {"pressed", dark ? "#343434" : "#d0d0d0"},
+        {"border", dark ? "#353535" : "#cbcbcb"}, {"borderStrong", dark ? "#3a3a3a" : "#bfbfbf"},
+        {"selection", dark ? "#245488" : "#d9e9ff"}, {"selectionText", dark ? "#ededed" : "#12385e"},
+        {"subtle", dark ? "#929292" : "#686868"},
+        {"disabled", dark ? "#656565" : "#989898"}, {"menuHover", dark ? "#383838" : "#e1e1e1"},
+        {"menu", dark ? "rgba(37, 37, 37, 242)" : "rgba(249, 249, 249, 242)"},
+        {"incognito", dark ? "#a491ff" : "#6545cc"}
+    };
+    QFile style(":/assets/style.qss");
+    if (style.open(QIODevice::ReadOnly)) {
+        auto css = QString::fromUtf8(style.readAll());
+        for (auto it = tokens.cbegin(); it != tokens.cend(); ++it) css.replace("@" + it.key() + "@", it.value());
+        setStyleSheet(css);
+    }
+    for (auto *button : findChildren<QToolButton *>()) {
+        const auto name = button->property("neoIcon").toString();
+        if (!name.isEmpty()) button->setIcon(neoIcon(name, text));
+    }
+    for (auto *action : findChildren<QAction *>()) {
+        const auto name = action->property("neoIcon").toString();
+        if (!name.isEmpty()) action->setIcon(neoIcon(name, text));
+    }
+    for (auto *combo : findChildren<QComboBox *>("themeSelector")) {
+        const QStringList icons{"device", "sun", "moon"};
+        for (int i = 0; i < icons.size(); ++i) combo->setItemIcon(i, neoIcon(icons.at(i), text));
+    }
+    for (auto *view : findChildren<QWebEngineView *>()) view->page()->setBackgroundColor(background);
+#ifdef Q_OS_WIN
+    const BOOL darkTitle = dark;
+    DwmSetWindowAttribute(reinterpret_cast<HWND>(winId()), 20, &darkTitle, sizeof(darkTitle));
+#endif
+}
+
 QStackedWidget *BrowserWindow::activeStack() const { return qobject_cast<QStackedWidget *>(tabs->currentWidget()); }
 QWebEngineView *BrowserWindow::activeView() const { return activeStack() ? activeStack()->findChild<QWebEngineView *>() : nullptr; }
 
@@ -191,10 +256,21 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     stack->addWidget(home);
     auto *view = new QWebEngineView(stack);
     auto *page = new QWebEnginePage(incognito ? privateProfile : regularProfile, view);
-    page->setBackgroundColor(QColor("#191919"));
+    page->setBackgroundColor(palette().color(QPalette::Window));
     view->setPage(page);
     stack->addWidget(view);
     const int index = tabs->addTab(stack, incognito ? tr("Инкогнито") : tr("Новая вкладка"));
+    auto *close = new QToolButton(tabs->tabBar());
+    close->setObjectName("tabCloseButton");
+    close->setProperty("neoIcon", "close");
+    close->setIcon(neoIcon("close", palette().color(QPalette::Text)));
+    close->setIconSize(QSize(14, 14));
+    close->setFixedSize(24, 24);
+    close->setToolTip(tr("Закрыть вкладку"));
+    close->setAccessibleName(tr("Закрыть вкладку"));
+    tabs->tabBar()->setTabButton(index, QTabBar::RightSide, close);
+    connect(close, &QToolButton::clicked, this, [this, stack] { closeTab(tabs->indexOf(stack)); });
+    connect(stack, &QObject::destroyed, close, &QObject::deleteLater);
     connect(home, &HomePage::submitted, this, [this, stack](const QString &text) {
         tabs->setCurrentWidget(stack);
         navigate(text);
@@ -310,17 +386,19 @@ void BrowserWindow::showMenu()
     auto *menu = new QMenu(this);
     menu->setObjectName("overflowMenu");
     menu->setAttribute(Qt::WA_TranslucentBackground);
-    menu->addAction(tr("Новая вкладка"), this, [this] { newTab(); });
-    menu->addAction(tr("Вкладка инкогнито"), this, [this] { newTab(true); });
+    const auto iconColor = palette().color(QPalette::Text);
+    menu->addAction(neoIcon("plus", iconColor), tr("Новая вкладка"), this, [this] { newTab(); })->setProperty("neoIcon", "plus");
+    menu->addAction(neoIcon("eye-off", iconColor), tr("Вкладка инкогнито"), this, [this] { newTab(true); })->setProperty("neoIcon", "eye-off");
     menu->addSeparator();
-    menu->addAction(tr("Закладки"), this, [this] { showLibrary(false); });
-    menu->addAction(tr("История"), this, [this] { showLibrary(true); });
-    auto *find = menu->addAction(tr("Найти на странице"), this, &BrowserWindow::findInPage);
+    menu->addAction(neoIcon("bookmark", iconColor), tr("Закладки"), this, [this] { showLibrary(false); })->setProperty("neoIcon", "bookmark");
+    menu->addAction(neoIcon("history", iconColor), tr("История"), this, [this] { showLibrary(true); })->setProperty("neoIcon", "history");
+    auto *find = menu->addAction(neoIcon("search", iconColor), tr("Найти на странице"), this, &BrowserWindow::findInPage);
+    find->setProperty("neoIcon", "search");
     find->setEnabled(activeStack()->currentIndex() == 1);
     menu->addSeparator();
-    menu->addAction(tr("Настройки"), this, &BrowserWindow::showSettings);
+    menu->addAction(neoIcon("settings", iconColor), tr("Настройки"), this, &BrowserWindow::showSettings)->setProperty("neoIcon", "settings");
     menu->addSeparator();
-    menu->addAction(tr("Выход"), this, &QWidget::close);
+    menu->addAction(neoIcon("logout", iconColor), tr("Выход"), this, &QWidget::close)->setProperty("neoIcon", "logout");
     connect(menu, &QMenu::aboutToHide, menu, &QObject::deleteLater);
     const auto *button = findChild<QToolButton *>("menuButton");
     menu->ensurePolished();
@@ -347,6 +425,14 @@ void BrowserWindow::showSettings()
     engine->addItems({"Google", "DuckDuckGo", tr("Яндекс"), "Bing", "Brave"});
     engine->setCurrentText(settings.value("search/engine", "Google").toString());
     layout->addRow(tr("Поисковая система"), engine);
+    auto *theme = new QComboBox(&dialog);
+    theme->setObjectName("themeSelector");
+    const auto iconColor = palette().color(QPalette::Text);
+    theme->addItem(neoIcon("device", iconColor), tr("Как на устройстве"), "system");
+    theme->addItem(neoIcon("sun", iconColor), tr("Светлая"), "light");
+    theme->addItem(neoIcon("moon", iconColor), tr("Тёмная"), "dark");
+    theme->setCurrentIndex(qMax(0, theme->findData(settings.value("appearance/theme", "system"))));
+    layout->insertRow(0, tr("Оформление"), theme);
     auto *weatherToggle = new QCheckBox(tr("Погода на главной"), &dialog);
     weatherToggle->setChecked(settings.value("weather/enabled", true).toBool());
     layout->addRow(weatherToggle);
@@ -359,6 +445,8 @@ void BrowserWindow::showSettings()
     connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     if (dialog.exec() == QDialog::Accepted) {
         settings.setValue("search/engine", engine->currentText());
+        settings.setValue("appearance/theme", theme->currentData());
+        applyTheme();
         settings.setValue("weather/enabled", weatherToggle->isChecked());
         for (auto *home : findChildren<HomePage *>()) home->setWeatherEnabled(weatherToggle->isChecked());
         weather.setEnabled(weatherToggle->isChecked());

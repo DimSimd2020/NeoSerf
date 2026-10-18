@@ -16,12 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VisibilityOff
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -177,7 +172,7 @@ fun TabsModalSheet(
                 modifier = Modifier.weight(1f)
               ) {
                 Icon(
-                  imageVector = if (tab.isIncognito) Icons.Default.VisibilityOff else Icons.Default.Public,
+                  imageVector = if (tab.isIncognito) NeoIcons.VisibilityOff else NeoIcons.Public,
                   contentDescription = null,
                   tint = accent,
                   modifier = Modifier.size(20.dp)
@@ -207,7 +202,7 @@ fun TabsModalSheet(
                 modifier = Modifier.size(36.dp)
               ) {
                 Icon(
-                  imageVector = Icons.Default.Close,
+                  imageVector = NeoIcons.Close,
                   contentDescription = stringResource(R.string.action_close),
                   tint = MaterialTheme.colorScheme.onSurfaceVariant,
                   modifier = Modifier.size(18.dp)
@@ -233,7 +228,7 @@ fun TabsModalSheet(
             .weight(1f)
             .testTag("new_regular_tab_button")
         ) {
-          Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+          Icon(imageVector = NeoIcons.Add, contentDescription = null, modifier = Modifier.size(18.dp))
           Spacer(modifier = Modifier.width(6.dp))
           Text(text = stringResource(R.string.tabs_new_regular))
         }
@@ -248,7 +243,7 @@ fun TabsModalSheet(
             .testTag("new_incognito_tab_button")
         ) {
           Icon(
-            imageVector = Icons.Default.VisibilityOff,
+            imageVector = NeoIcons.VisibilityOff,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(18.dp)
@@ -311,7 +306,7 @@ fun AdBlockShieldSheet(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Icon(
-          imageVector = Icons.Default.Shield,
+          imageVector = NeoIcons.Shield,
           contentDescription = null,
           tint = MaterialTheme.colorScheme.secondary,
           modifier = Modifier.size(28.dp)

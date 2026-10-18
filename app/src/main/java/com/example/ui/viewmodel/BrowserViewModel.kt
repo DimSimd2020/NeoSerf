@@ -477,6 +477,10 @@ class BrowserViewModel(
     viewModelScope.launch { prefsRepository.setShowSpeedDial(show) }
   }
 
+  fun setAppTheme(theme: com.example.data.model.AppTheme) {
+    viewModelScope.launch { prefsRepository.setAppTheme(theme) }
+  }
+
   // --- CLOUD BOOKMARKS, SPEED DIAL, HISTORY & PASSWORD VAULT ---
 
   fun toggleBookmarkForActiveTab(folder: String = "Избранное") {

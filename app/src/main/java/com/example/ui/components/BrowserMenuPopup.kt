@@ -12,10 +12,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.*
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +29,7 @@ import androidx.compose.ui.window.PopupProperties
 import com.example.data.local.BrowserPreferencesState
 import com.example.data.model.BrowserTab
 import com.example.data.model.SearchEngine
+import com.example.data.model.AppTheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -52,6 +50,7 @@ fun BrowserMenuPopup(
   onSelectSearchEngine: (SearchEngine) -> Unit,
   onSetShowWeather: (Boolean) -> Unit,
   onSetShowSpeedDial: (Boolean) -> Unit,
+  onSetAppTheme: (AppTheme) -> Unit,
   onRefreshWeather: () -> Unit,
   onRequestLocation: () -> Unit,
   onSignOut: () -> Unit,
@@ -96,9 +95,29 @@ fun BrowserMenuPopup(
       ) {
         Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(vertical = 10.dp)) {
           if (settings) {
-            MenuRow(Icons.AutoMirrored.Filled.ArrowBack, "Настройки", "menu_back") { settings = false }
+            MenuRow(NeoIcons.ArrowBack, "Настройки", "menu_back") { settings = false }
             HorizontalDivider(Modifier.padding(horizontal = 18.dp), color = MaterialTheme.colorScheme.outline)
             Column(Modifier.padding(horizontal = 18.dp, vertical = 10.dp)) {
+              Text("Оформление", style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+              FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                AppTheme.entries.forEach { theme ->
+                  FilterChip(
+                    selected = theme == preferences.appTheme,
+                    onClick = { onSetAppTheme(theme) },
+                    label = { Text(theme.title) },
+                    leadingIcon = {
+                      Icon(when (theme) {
+                        AppTheme.SYSTEM -> NeoIcons.Device
+                        AppTheme.LIGHT -> NeoIcons.WbSunny
+                        AppTheme.DARK -> NeoIcons.NightsStay
+                      }, null, Modifier.size(16.dp))
+                    },
+                    modifier = Modifier.testTag("settings_theme_${theme.name}")
+                  )
+                }
+              }
+              Spacer(Modifier.height(10.dp))
               Text("Поисковая система", style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
               FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -114,10 +133,10 @@ fun BrowserMenuPopup(
               MenuToggle("Погода", preferences.showWeatherWidget, "settings_weather", onSetShowWeather)
               MenuToggle("Быстрый доступ", preferences.showSpeedDial, "settings_shortcuts", onSetShowSpeedDial)
             }
-            MenuRow(Icons.Default.MyLocation, "Уточнить местоположение", "menu_location") {
+            MenuRow(NeoIcons.MyLocation, "Уточнить местоположение", "menu_location") {
               choose(onRequestLocation)
             }
-            MenuRow(Icons.Default.Refresh, "Обновить погоду", "menu_weather_refresh") {
+            MenuRow(NeoIcons.Refresh, "Обновить погоду", "menu_weather_refresh") {
               choose(onRefreshWeather)
             }
             Text("Регион определяется по сети. Разрешите местоположение для более точной погоды.",
@@ -128,23 +147,23 @@ fun BrowserMenuPopup(
                 Text(it, Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                   style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
               }
-              MenuRow(Icons.AutoMirrored.Filled.Logout, "Выйти из аккаунта", "sign_out_button") { choose(onSignOut) }
+              MenuRow(NeoIcons.Logout, "Выйти из аккаунта", "sign_out_button") { choose(onSignOut) }
             }
           } else {
-            MenuRow(Icons.Default.Add, "Новая вкладка", "menu_new_tab") { choose { onNewTab(false) } }
-            MenuRow(Icons.Default.VisibilityOff, "Вкладка инкогнито", "menu_incognito") { choose { onNewTab(true) } }
+            MenuRow(NeoIcons.Add, "Новая вкладка", "menu_new_tab") { choose { onNewTab(false) } }
+            MenuRow(NeoIcons.VisibilityOff, "Вкладка инкогнито", "menu_incognito") { choose { onNewTab(true) } }
             HorizontalDivider(Modifier.padding(horizontal = 18.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.outline)
-            MenuRow(Icons.Default.BookmarkBorder, "Закладки", "menu_item_bookmarks") { choose(onOpenBookmarks) }
-            MenuRow(Icons.Default.History, "История", "menu_item_history") { choose(onOpenHistory) }
-            MenuRow(Icons.Default.Key, "Пароли", "menu_item_passwords") { choose(onOpenPasswords) }
+            MenuRow(NeoIcons.BookmarkBorder, "Закладки", "menu_item_bookmarks") { choose(onOpenBookmarks) }
+            MenuRow(NeoIcons.History, "История", "menu_item_history") { choose(onOpenHistory) }
+            MenuRow(NeoIcons.Key, "Пароли", "menu_item_passwords") { choose(onOpenPasswords) }
             if (!activeTab.isStartPage) {
-              MenuRow(Icons.Default.Password, "Заполнить пароль", "menu_item_autofill") { choose(onAutofillActiveSite) }
+              MenuRow(NeoIcons.Password, "Заполнить пароль", "menu_item_autofill") { choose(onAutofillActiveSite) }
               MenuToggle("Версия для ПК", activeTab.isDesktopMode, "menu_switch_desktop") { choose(onToggleDesktopMode) }
               MenuToggle("Режим чтения", activeTab.isReaderMode, "menu_switch_reader") { choose(onToggleReaderMode) }
             }
-            MenuRow(Icons.Default.Shield, "Защита", "menu_item_shield") { choose(onOpenShield) }
+            MenuRow(NeoIcons.Shield, "Защита", "menu_item_shield") { choose(onOpenShield) }
             HorizontalDivider(Modifier.padding(horizontal = 18.dp, vertical = 6.dp), color = MaterialTheme.colorScheme.outline)
-            MenuRow(Icons.Default.Tune, "Настройки", "menu_settings") { settings = true }
+            MenuRow(NeoIcons.Tune, "Настройки", "menu_settings") { settings = true }
           }
         }
       }

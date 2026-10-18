@@ -12,9 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Search
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +66,7 @@ fun StartSearchField(onSubmit: (String) -> Unit) {
       .padding(start = 18.dp, end = 4.dp),
     verticalAlignment = Alignment.CenterVertically
   ) {
-    Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
+    Icon(NeoIcons.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(21.dp))
     Box(modifier = Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 16.dp)) {
       if (query.isEmpty()) {
         Text(
@@ -102,7 +100,7 @@ fun StartSearchField(onSubmit: (String) -> Unit) {
       )
     }
     IconButton(onClick = { submit() }, modifier = Modifier.size(48.dp).testTag("start_search_submit")) {
-      Icon(Icons.AutoMirrored.Filled.ArrowForward, "Найти", tint = MaterialTheme.colorScheme.primary)
+      Icon(NeoIcons.ArrowForward, "Найти", tint = MaterialTheme.colorScheme.primary)
     }
   }
 }

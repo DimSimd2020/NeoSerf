@@ -2,19 +2,23 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.local.BrowserPreferencesRepository
+import com.example.data.local.BrowserPreferencesState
 import com.example.data.remote.FirebaseAvailability
 import com.example.data.remote.WeatherRepository
 import com.example.data.repository.FirestoreBrowserSyncRepository
@@ -41,12 +45,18 @@ internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    enableEdgeToEdge(
-      statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
-      navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-    )
+    enableEdgeToEdge()
     setContent {
-      NeoSerfTheme {
+      val prefsRepository = remember { BrowserPreferencesRepository(applicationContext) }
+      val preferences by prefsRepository.preferencesFlow.collectAsStateWithLifecycle(BrowserPreferencesState())
+      NeoSerfTheme(preferences.appTheme) {
+        val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        SideEffect {
+          WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+          }
+        }
         AppNavigation()
       }
     }

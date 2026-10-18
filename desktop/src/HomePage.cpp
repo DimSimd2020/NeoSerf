@@ -1,4 +1,5 @@
 #include "HomePage.h"
+#include "UiAssets.h"
 #include <QAction>
 #include <QLabel>
 #include <QLineEdit>
@@ -39,7 +40,7 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     if (incognito) {
         auto *label = new QLabel(tr("Инкогнито"), center);
         label->setAlignment(Qt::AlignCenter);
-        label->setStyleSheet("color: #a491ff; padding-top: 8px;");
+        label->setObjectName("incognitoHint");
         content->addWidget(label);
     }
     content->addSpacing(32);
@@ -47,7 +48,7 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     search->setObjectName("homeSearch");
     search->setPlaceholderText(tr("Поиск или адрес сайта"));
     search->setAccessibleName(tr("Поиск или адрес сайта"));
-    search->setClearButtonEnabled(true);
+    addClearButton(search);
     connect(search, &QLineEdit::returnPressed, this, [this, search] {
         if (!search->text().trimmed().isEmpty()) emit submitted(search->text());
     });
@@ -69,7 +70,7 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
         weatherLayout->addWidget(label);
     }
     retry = new QPushButton(tr("Повторить"), weatherBox);
-    retry->setStyleSheet("color: #459fff;");
+    retry->setObjectName("actionLink");
     retry->hide();
     weatherLayout->addWidget(retry, 0, Qt::AlignCenter);
     connect(retry, &QPushButton::clicked, this, &HomePage::refreshWeather);

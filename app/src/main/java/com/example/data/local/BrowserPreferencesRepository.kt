@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.data.model.ReaderTheme
+import com.example.data.model.AppTheme
 import com.example.data.model.SearchEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.map
 private val Context.browserDataStore by preferencesDataStore(name = "neoserf_preferences")
 
 data class BrowserPreferencesState(
+  val appTheme: AppTheme = AppTheme.SYSTEM,
   val searchEngine: SearchEngine = SearchEngine.GOOGLE,
   val showWeatherWidget: Boolean = true,
   val showSpeedDial: Boolean = false,
@@ -29,6 +31,7 @@ data class BrowserPreferencesState(
 class BrowserPreferencesRepository(private val context: Context) {
 
   private object Keys {
+    val APP_THEME = stringPreferencesKey("app_theme")
     val SEARCH_ENGINE = stringPreferencesKey("search_engine")
     val SHOW_WEATHER = booleanPreferencesKey("show_weather_widget")
     val SHOW_SPEED_DIAL = booleanPreferencesKey("show_speed_dial")
@@ -42,6 +45,7 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   val preferencesFlow: Flow<BrowserPreferencesState> = context.browserDataStore.data.map { prefs ->
     BrowserPreferencesState(
+      appTheme = AppTheme.entries.firstOrNull { it.name == prefs[Keys.APP_THEME] } ?: AppTheme.SYSTEM,
       searchEngine = SearchEngine.fromId(prefs[Keys.SEARCH_ENGINE] ?: SearchEngine.GOOGLE.id),
       showWeatherWidget = prefs[Keys.SHOW_WEATHER] ?: true,
       showSpeedDial = prefs[Keys.SHOW_SPEED_DIAL] ?: false,
@@ -56,6 +60,10 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   suspend fun setSearchEngine(engine: SearchEngine) {
     context.browserDataStore.edit { it[Keys.SEARCH_ENGINE] = engine.id }
+  }
+
+  suspend fun setAppTheme(theme: AppTheme) {
+    context.browserDataStore.edit { it[Keys.APP_THEME] = theme.name }
   }
 
   suspend fun setShowWeatherWidget(show: Boolean) {

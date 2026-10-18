@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(NeoSerf VERSION 1.1.1 LANGUAGES CXX)
+project(NeoSerf VERSION 1.2.0 LANGUAGES CXX)
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -13,6 +13,7 @@ set(NEOSERF_SOURCES
     src/HomePage.cpp src/HomePage.h
     src/WeatherService.cpp src/WeatherService.h
     src/AddressResolver.cpp src/AddressResolver.h
+    src/UiAssets.cpp src/UiAssets.h
     resources.qrc)
 add_library(neoserf_browser STATIC ${NEOSERF_SOURCES})
 target_include_directories(neoserf_browser PUBLIC src)

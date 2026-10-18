@@ -17,10 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.TextDecrease
-import androidx.compose.material.icons.filled.TextIncrease
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -96,7 +93,7 @@ fun ReaderModeOverlay(
             modifier = Modifier.testTag("reader_font_decrease")
           ) {
             Icon(
-              imageVector = Icons.Default.TextDecrease,
+              imageVector = NeoIcons.TextDecrease,
               contentDescription = stringResource(R.string.reader_font_size),
               tint = textColor
             )
@@ -111,7 +108,7 @@ fun ReaderModeOverlay(
             modifier = Modifier.testTag("reader_font_increase")
           ) {
             Icon(
-              imageVector = Icons.Default.TextIncrease,
+              imageVector = NeoIcons.TextIncrease,
               contentDescription = stringResource(R.string.reader_font_size),
               tint = textColor
             )
@@ -122,7 +119,7 @@ fun ReaderModeOverlay(
             modifier = Modifier.testTag("reader_close_button")
           ) {
             Icon(
-              imageVector = Icons.Default.Close,
+              imageVector = NeoIcons.Close,
               contentDescription = stringResource(R.string.reader_mode_exit),
               tint = textColor
             )

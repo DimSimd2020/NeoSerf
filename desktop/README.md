@@ -25,6 +25,8 @@ cmake --install desktop/build --config Release --prefix /absolute/path/to/packag
 
 ## Behavior
 
+- Settings → Оформление: follow the system (default), light or dark. The system mode updates an open window when the device theme changes; manual choices persist. SVG action icons, menus, dialogs, form controls and the title bar use the selected palette.
+
 - Real web browsing, back/forward, reload, home, multiple tabs and new-tab links.
 - Search or URL in the center of the home page; the search provider lives in Settings.
 - Gray `#191919` background, blue `#459fff` accents and the same vector monogram as Android.

@@ -8,8 +8,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -132,12 +131,12 @@ private fun WeatherWidget(state: UiState<WeatherForecast>, onRefresh: () -> Unit
       is UiState.Success -> {
         val weather = state.data
         val icon = when (weather.weatherCode) {
-          0, 1 -> if (weather.isDay) Icons.Default.WbSunny else Icons.Default.NightsStay
-          2, 3 -> Icons.Default.Cloud
-          45, 48 -> Icons.Default.BlurOn
-          71, 73, 75, 77, 85, 86 -> Icons.Default.AcUnit
-          95, 96, 99 -> Icons.Default.Thunderstorm
-          else -> Icons.Default.WaterDrop
+          0, 1 -> if (weather.isDay) NeoIcons.WbSunny else NeoIcons.NightsStay
+          2, 3 -> NeoIcons.Cloud
+          45, 48 -> NeoIcons.BlurOn
+          71, 73, 75, 77, 85, 86 -> NeoIcons.AcUnit
+          95, 96, 99 -> NeoIcons.Thunderstorm
+          else -> NeoIcons.WaterDrop
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
           Icon(icon, null, Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary)
@@ -187,7 +186,7 @@ private fun SpeedDialSection(
         modifier = Modifier.testTag("add_speed_dial_button")
       ) {
         Icon(
-          imageVector = Icons.Default.Add,
+          imageVector = NeoIcons.Add,
           contentDescription = stringResource(R.string.speed_dial_add),
           modifier = Modifier.size(18.dp)
         )
@@ -306,7 +305,7 @@ private fun SpeedDialCard(
           modifier = Modifier.size(28.dp)
         ) {
           Icon(
-            imageVector = Icons.Default.Close,
+            imageVector = NeoIcons.Close,
             contentDescription = stringResource(R.string.action_delete),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp)

@@ -379,6 +379,7 @@ fun BrowserScreen(
     onAutofillActiveSite = viewModel::autofillMatchingSiteForActiveTab,
     onSetShowWeather = viewModel::setShowWeatherWidget,
     onSetShowSpeedDial = viewModel::setShowSpeedDial,
+    onSetAppTheme = viewModel::setAppTheme,
     onOpenShield = { activeModal = ActiveModal.SHIELD },
     onNewTab = { incognito -> viewModel.createNewTab(isIncognito = incognito) },
     onRefreshWeather = { viewModel.refreshWeather() },

@@ -4,15 +4,21 @@
 #include "WeatherService.h"
 #include <QApplication>
 #include <QDir>
+#include <QDialog>
+#include <QComboBox>
 #include <QJsonDocument>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QSettings>
+#include <QScopeGuard>
+#include <QStyleHints>
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QTabWidget>
+#include <QTabBar>
+#include <QTimer>
 #include <QTest>
 #include <QToolButton>
 #include <QWebEnginePage>
@@ -29,6 +35,7 @@ private slots:
         QStandardPaths::setTestModeEnabled(true);
         QSettings().clear();
         QSettings().setValue("weather/enabled", false);
+        QSettings().setValue("appearance/theme", "dark");
         QApplication::setStyle("Fusion");
     }
     void cleanupTestCase() { QSettings().clear(); }
@@ -99,7 +106,9 @@ private slots:
         auto *privateView = tabs->currentWidget()->findChild<QWebEngineView *>();
         QVERIFY(privateView->page()->profile()->isOffTheRecord());
         QSignalSpy privateProfileDestroyed(privateView->page()->profile(), &QObject::destroyed);
-        QTest::keyClick(&window, Qt::Key_W, Qt::ControlModifier);
+        auto *close = qobject_cast<QToolButton *>(tabs->tabBar()->tabButton(tabs->currentIndex(), QTabBar::RightSide));
+        QVERIFY(close && !close->icon().isNull());
+        QTest::mouseClick(close, Qt::LeftButton);
         QCOMPARE(privateProfileDestroyed.count(), 1);
         QCOMPARE(tabs->count(), 2);
         QTest::keyClick(&window, Qt::Key_L, Qt::ControlModifier);
@@ -131,6 +140,75 @@ private slots:
         const auto urls = QSettings().value("session/urls").toStringList();
         QVERIFY(urls.contains("https://example.org/path"));
         QVERIFY(!urls.contains("https://private.example/secret"));
+    }
+
+    void themeSettingsPersistAndKeepControlsReadable()
+    {
+        BrowserWindow window;
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        for (const auto &mode : {QString("light"), QString("dark")}) {
+            QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
+            auto *menu = window.findChild<QMenu *>("overflowMenu");
+            QVERIFY(menu);
+            QAction *settingsAction = nullptr;
+            for (auto *action : menu->actions()) if (action->text() == QString::fromUtf8("Настройки")) settingsAction = action;
+            QVERIFY(settingsAction);
+            bool selected = false;
+            QTimer::singleShot(0, &window, [&] {
+                auto *dialog = window.findChild<QDialog *>();
+                auto *combo = dialog ? dialog->findChild<QComboBox *>("themeSelector") : nullptr;
+                if (combo) {
+                    combo->setCurrentIndex(combo->findData(mode));
+                    selected = true;
+                    dialog->accept();
+                } else if (dialog) dialog->reject();
+            });
+            menu->hide();
+            settingsAction->trigger();
+            QVERIFY(selected);
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            QCOMPARE(QSettings().value("appearance/theme").toString(), mode);
+            QCOMPARE(window.property("darkTheme").toBool(), mode == "dark");
+            const auto colors = window.palette();
+            QVERIFY(qAbs(colors.color(QPalette::Window).lightness() - colors.color(QPalette::Text).lightness()) > 180);
+            for (auto *button : window.findChildren<QToolButton *>()) {
+                if (button->property("neoIcon").isValid()) QVERIFY(!button->icon().isNull());
+            }
+            auto *search = window.findChild<QLineEdit *>("homeSearch");
+            search->setText("clear me");
+            auto *clear = search->actions().first();
+            QVERIFY(clear->isVisible() && !clear->icon().isNull());
+            clear->trigger();
+            QVERIFY(search->text().isEmpty() && !clear->isVisible());
+            const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
+            if (!artifacts.isEmpty()) {
+                QTest::qWait(50);
+                QVERIFY(window.grab().save(artifacts + "/desktop-home-" + mode + ".png"));
+                QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
+                QTest::qWait(220);
+                auto *popup = qobject_cast<QMenu *>(QApplication::activePopupWidget());
+                QVERIFY(popup && popup->grab().save(artifacts + "/desktop-menu-" + mode + ".png"));
+                popup->hide();
+            }
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        }
+        window.close();
+    }
+
+    void systemThemeChangesApplyToAnOpenWindow()
+    {
+        QSettings().setValue("appearance/theme", "system");
+        auto *hints = QGuiApplication::styleHints();
+        const auto restore = qScopeGuard([hints] { hints->unsetColorScheme(); });
+        hints->setColorScheme(Qt::ColorScheme::Dark);
+        if (hints->colorScheme() != Qt::ColorScheme::Dark) QSKIP("Platform does not expose a mutable system color scheme");
+        BrowserWindow window;
+        QCOMPARE(window.property("darkTheme").toBool(), true);
+        hints->setColorScheme(Qt::ColorScheme::Light);
+        QTRY_COMPARE(window.property("darkTheme").toBool(), false);
+        hints->setColorScheme(Qt::ColorScheme::Dark);
+        QTRY_COMPARE(window.property("darkTheme").toBool(), true);
     }
 };
 

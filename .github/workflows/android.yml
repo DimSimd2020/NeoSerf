@@ -126,6 +126,7 @@ jobs:
             --tests 'com.example.BrowserUiRegressionTest' \
             --tests 'com.example.BrowserUiRegressionWideTest' \
             --tests 'com.example.StartSearchFieldTest' \
+            --tests 'com.example.AppThemeTest' \
             --tests 'com.example.data.remote.WeatherRepositoryTest' \
             --tests 'com.example.OmniboxSubmitGuardTest' \
             --tests 'com.example.data.repository.LocalBrowserSyncRepositoryTest'
@@ -150,7 +151,7 @@ jobs:
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             APK_NAME="NeoSerf-${GITHUB_REF_NAME}.apk"
           else
-            APK_NAME="NeoSerf-1.1.1.apk"
+            APK_NAME="NeoSerf-1.2.0.apk"
           fi
 
           cp "$SOURCE_APK" "dist/${APK_NAME}"

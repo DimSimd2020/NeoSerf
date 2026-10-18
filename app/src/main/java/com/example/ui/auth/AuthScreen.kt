@@ -25,11 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CloudSync
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.Shield
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -279,7 +275,7 @@ fun AuthScreen(
             contentAlignment = Alignment.Center
           ) {
             Icon(
-              imageVector = Icons.Default.Public,
+              imageVector = NeoIcons.Public,
               contentDescription = stringResource(R.string.app_name),
               tint = MaterialTheme.colorScheme.primary,
               modifier = Modifier.size(44.dp)
@@ -307,17 +303,17 @@ fun AuthScreen(
           Spacer(modifier = Modifier.height(28.dp))
 
           FeatureHighlightRow(
-            icon = Icons.Default.Shield,
+            icon = NeoIcons.Shield,
             text = stringResource(R.string.auth_feature_adblock)
           )
           Spacer(modifier = Modifier.height(12.dp))
           FeatureHighlightRow(
-            icon = Icons.Default.CloudSync,
+            icon = NeoIcons.CloudSync,
             text = stringResource(R.string.auth_feature_modes)
           )
           Spacer(modifier = Modifier.height(12.dp))
           FeatureHighlightRow(
-            icon = Icons.Default.Lock,
+            icon = NeoIcons.Lock,
             text = stringResource(R.string.auth_feature_vault)
           )
 

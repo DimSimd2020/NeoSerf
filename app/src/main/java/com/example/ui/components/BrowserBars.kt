@@ -22,17 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Shield
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.Badge
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -174,7 +164,7 @@ fun TopOmniboxBar(
             verticalAlignment = Alignment.CenterVertically
           ) {
             Icon(
-              imageVector = if (adBlockEnabled) Icons.Default.Shield else Icons.Default.Security,
+              imageVector = if (adBlockEnabled) NeoIcons.Shield else NeoIcons.Security,
               contentDescription = stringResource(R.string.cd_shield_stats),
               tint = if (adBlockEnabled) {
                 MaterialTheme.colorScheme.secondary
@@ -263,7 +253,7 @@ fun TopOmniboxBar(
                 .testTag("omnibox_clear_button")
             ) {
               Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = NeoIcons.Close,
                 contentDescription = stringResource(R.string.cd_clear_input),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp)
@@ -277,7 +267,7 @@ fun TopOmniboxBar(
                 .testTag("omnibox_reload_button")
             ) {
               Icon(
-                imageVector = Icons.Default.Refresh,
+                imageVector = NeoIcons.Refresh,
                 contentDescription = stringResource(R.string.cd_reload_page),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(17.dp)
@@ -297,7 +287,7 @@ fun TopOmniboxBar(
               .testTag("bookmark_toggle_button")
           ) {
             Icon(
-              imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+              imageVector = if (isBookmarked) NeoIcons.Bookmark else NeoIcons.BookmarkBorder,
               contentDescription = stringResource(R.string.cd_bookmark_toggle),
               tint = if (isBookmarked) {
                 MaterialTheme.colorScheme.primary
@@ -367,7 +357,7 @@ fun BottomBrowserBar(
             .testTag("nav_back_button")
         ) {
           Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            imageVector = NeoIcons.ArrowBack,
             contentDescription = stringResource(R.string.nav_back),
             tint = if (!activeTab.isStartPage || activeTab.isReaderMode) {
               MaterialTheme.colorScheme.onSurface
@@ -385,7 +375,7 @@ fun BottomBrowserBar(
             .testTag("nav_forward_button")
         ) {
           Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            imageVector = NeoIcons.ArrowForward,
             contentDescription = stringResource(R.string.nav_forward),
             tint = if (activeTab.canGoForward && !activeTab.isStartPage) {
               MaterialTheme.colorScheme.onSurface
@@ -402,7 +392,7 @@ fun BottomBrowserBar(
             .testTag("nav_home_button")
         ) {
           Icon(
-            imageVector = Icons.Default.Home,
+            imageVector = NeoIcons.Home,
             contentDescription = stringResource(R.string.nav_home),
             tint = if (activeTab.isStartPage) {
               MaterialTheme.colorScheme.primary
@@ -453,7 +443,7 @@ fun BottomBrowserBar(
             .testTag("nav_menu_button")
         ) {
           Icon(
-            imageVector = Icons.Default.MoreVert,
+            imageVector = NeoIcons.MoreVert,
             contentDescription = stringResource(R.string.nav_menu),
             tint = MaterialTheme.colorScheme.onSurface
           )

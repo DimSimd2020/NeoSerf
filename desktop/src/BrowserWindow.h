@@ -30,6 +30,7 @@ private:
     void updateChrome();
     void showMenu();
     void showSettings();
+    void applyTheme();
     void showLibrary(bool history);
     void bookmarkPage();
     void findInPage();

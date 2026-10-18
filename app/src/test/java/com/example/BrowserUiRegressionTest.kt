@@ -105,6 +105,22 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithTag("omnibox_input").assertTextEquals("")
   }
 
+  @Test fun themeChoiceSurvivesActivityRecreation() {
+    fun openSettings() {
+      composeRule.onNodeWithTag("nav_menu_button").performClick()
+      composeRule.onNodeWithTag("menu_settings").performClick()
+    }
+    openSettings()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performClick()
+    composeRule.waitUntil(5_000) {
+      composeRule.onAllNodes(hasTestTag("settings_theme_LIGHT") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+    }
+    composeRule.activityRule.scenario.recreate()
+    openSettings()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").assertIsSelected()
+    composeRule.onNodeWithTag("settings_theme_SYSTEM").performClick()
+  }
+
   @Test fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
     composeRule.onNodeWithTag("nav_menu_button").performClick()
     composeRule.onNodeWithTag("menu_item_shield").performClick()
