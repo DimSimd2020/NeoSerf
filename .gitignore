@@ -16,5 +16,9 @@
 local.properties
 .env
 debug.keystore
+*.jks
+*.keystore
+*.apk
+!gradle/wrapper/gradle-wrapper.jar
 
 *-debug.log
