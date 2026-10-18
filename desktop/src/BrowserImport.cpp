@@ -30,12 +30,20 @@ QVector<BrowserProfile> BrowserImport::discover(const QString &localData, const 
     };
     QVector<BrowserProfile> profiles;
     for (const auto &root : roots) {
+        // "Local State" maps profile folders ("Profile 1") to the names people gave them.
+        QFile state(root.path + "/Local State");
+        QJsonObject names;
+        if (state.open(QIODevice::ReadOnly))
+            names = QJsonDocument::fromJson(state.readAll()).object().value("profile").toObject().value("info_cache").toObject();
         QStringList candidates{root.path}; // Older Opera stores files directly in this directory.
         for (const auto &dir : QDir(root.path).entryList({"Default", "Profile *"}, QDir::Dirs | QDir::NoDotAndDotDot))
             candidates.append(root.path + "/" + dir);
         for (const auto &path : candidates) {
-            if (QFile::exists(path + "/Bookmarks") || QFile::exists(path + "/History"))
-                profiles.append({root.name + " · " + QDir(path).dirName(), path});
+            if (!QFile::exists(path + "/Bookmarks") && !QFile::exists(path + "/History")) continue;
+            const auto folder = QDir(path).dirName();
+            auto label = names.value(folder).toObject().value("name").toString().trimmed();
+            if (label.isEmpty()) label = folder;
+            profiles.append({root.name + " · " + label, path});
         }
     }
     return profiles;

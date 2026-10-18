@@ -2,6 +2,7 @@
 #include "ImportWidget.h"
 #include "Language.h"
 #include "UiAssets.h"
+#include "Widgets.h"
 #include <QButtonGroup>
 #include <QComboBox>
 #include <QEvent>
@@ -73,13 +74,13 @@ WelcomeDialog::WelcomeDialog(Language &language, QWidget *parent) : QDialog(pare
     form->setSpacing(14);
     appearanceLabel = new QLabel(intro);
     languageLabel = new QLabel(intro);
-    theme = new QComboBox(intro);
+    theme = new NeoComboBox(intro);
     theme->setObjectName("themeSelector");
     theme->addItem(QString(), "system");
     theme->addItem(QString(), "light");
     theme->addItem(QString(), "dark");
     theme->setCurrentIndex(qMax(0, theme->findData(settings.value("appearance/theme", "system"))));
-    languages = new QComboBox(intro);
+    languages = new NeoComboBox(intro);
     languages->setObjectName("languageSelector");
     languages->addItem(QString(), "system");
     languages->addItem("Русский", "ru");

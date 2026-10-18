@@ -143,6 +143,7 @@ data class WeatherForecast(
   val weatherCode: Int,
   val isDay: Boolean = true,
   val locationSource: String = "По сети",
+  val dataSource: String = "Open-Meteo",
   val conditionText: String,
   val dailyMaxC: Double,
   val dailyMinC: Double,

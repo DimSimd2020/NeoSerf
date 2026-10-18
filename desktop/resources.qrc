@@ -46,5 +46,16 @@
     <file>assets/icons/sun.svg</file>
     <file>assets/icons/text-minus.svg</file>
     <file>assets/icons/text-plus.svg</file>
+    <file>assets/icons/minimize.svg</file>
+    <file>assets/icons/maximize.svg</file>
+    <file>assets/icons/restore.svg</file>
+    <file>assets/icons/window-close.svg</file>
+    <file>assets/icons/palette.svg</file>
+    <file>assets/icons/power.svg</file>
+    <file>assets/icons/download.svg</file>
+    <file>assets/icons/info.svg</file>
+    <file>assets/icons/transfer.svg</file>
+    <file>assets/icons/open-new.svg</file>
+    <file>assets/icons/minus.svg</file>
   </qresource>
 </RCC>

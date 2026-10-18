@@ -65,7 +65,8 @@ fun BrowserMenuPopup(
   val configuration = LocalConfiguration.current
   val density = LocalDensity.current
   val bottomInset = WindowInsets.navigationBars.getBottom(density)
-  val offset = with(density) { IntOffset((-12).dp.roundToPx(), -64.dp.roundToPx() - bottomInset) }
+  // The popup keeps a margin around the menu for its shadow, so the menu itself sits 12 dp from the edge.
+  val offset = with(density) { IntOffset(0, -48.dp.roundToPx() - bottomInset) }
   fun choose(action: () -> Unit) {
     onDismiss()
     action()
@@ -84,11 +85,12 @@ fun BrowserMenuPopup(
         transformOrigin = TransformOrigin(1f, 1f))
     ) {
       Surface(
-        modifier = Modifier.width(minOf(304, configuration.screenWidthDp - 24).dp)
+        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 12.dp, bottom = 16.dp)
+          .width(minOf(304, configuration.screenWidthDp - 24).dp)
           .heightIn(max = (configuration.screenHeightDp * 0.64f).dp)
           .testTag("browser_overflow_menu"),
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         shadowElevation = 16.dp,
         tonalElevation = 0.dp
