@@ -70,8 +70,7 @@ jobs:
             KEYSTORE_PASSWORD=android
             KEY_ALIAS=upload
             KEY_PASSWORD=android
-            keytool -genkeypair -batch \
-              -storetype JKS \
+            keytool -genkeypair \
               -keystore "$KEYSTORE_FILE" \
               -alias "$KEY_ALIAS" \
               -keyalg RSA \
@@ -93,8 +92,7 @@ jobs:
 
           # The debug build type points at ${rootDir}/debug.keystore.
           if [ ! -f "$GITHUB_WORKSPACE/debug.keystore" ]; then
-            keytool -genkeypair -batch \
-              -storetype JKS \
+            keytool -genkeypair \
               -keystore "$GITHUB_WORKSPACE/debug.keystore" \
               -alias androiddebugkey \
               -keyalg RSA \
