@@ -92,7 +92,8 @@ class WeatherRepository(
         .filter { SystemClock.elapsedRealtimeNanos() - it.elapsedRealtimeNanos in 0..TimeUnit.MINUTES.toNanos(30) }
         .maxByOrNull { it.elapsedRealtimeNanos }
       if (cached != null) return cached
-      val provider = providers.firstOrNull { it == LocationManager.NETWORK_PROVIDER } ?: return null
+      // The fused provider (Android 12+) answers fastest; the network provider works on older devices.
+      val provider = listOf("fused", LocationManager.NETWORK_PROVIDER).firstOrNull { it in providers } ?: return null
       withTimeoutOrNull(5_000) {
         suspendCancellableCoroutine { continuation ->
           val cancellation = android.os.CancellationSignal()
