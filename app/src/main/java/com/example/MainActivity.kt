@@ -2,6 +2,7 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
@@ -40,7 +41,10 @@ internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
 class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
-    enableEdgeToEdge()
+    enableEdgeToEdge(
+      statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+      navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+    )
     setContent {
       NeoSerfTheme {
         AppNavigation()
@@ -73,7 +77,7 @@ private fun GuestBrowserScreen() {
         BrowserViewModel(
           syncRepository = LocalBrowserSyncRepository(),
           prefsRepository = BrowserPreferencesRepository(app),
-          weatherRepository = WeatherRepository(),
+          weatherRepository = WeatherRepository(app),
           currentUserId = FirebaseAvailability.LOCAL_GUEST_USER_ID
         )
       }
@@ -112,7 +116,7 @@ private fun AuthenticatedBrowserNavigation() {
           BrowserViewModel(
             syncRepository = FirestoreBrowserSyncRepository(firestore),
             prefsRepository = BrowserPreferencesRepository(app),
-            weatherRepository = WeatherRepository(),
+            weatherRepository = WeatherRepository(app),
             currentUserId = currentUserId
           )
         }

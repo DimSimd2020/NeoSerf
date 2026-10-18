@@ -16,10 +16,8 @@ private val Context.browserDataStore by preferencesDataStore(name = "neoserf_pre
 
 data class BrowserPreferencesState(
   val searchEngine: SearchEngine = SearchEngine.GOOGLE,
-  val weatherCity: String = "Москва",
   val showWeatherWidget: Boolean = true,
-  val showSpeedDial: Boolean = true,
-  val showShieldSummary: Boolean = true,
+  val showSpeedDial: Boolean = false,
   val adBlockEnabled: Boolean = true,
   val totalAdsBlocked: Int = 0,
   val totalTrackersBlocked: Int = 0,
@@ -32,10 +30,8 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   private object Keys {
     val SEARCH_ENGINE = stringPreferencesKey("search_engine")
-    val WEATHER_CITY = stringPreferencesKey("weather_city")
     val SHOW_WEATHER = booleanPreferencesKey("show_weather_widget")
     val SHOW_SPEED_DIAL = booleanPreferencesKey("show_speed_dial")
-    val SHOW_SHIELD_SUMMARY = booleanPreferencesKey("show_shield_summary")
     val ADBLOCK_ENABLED = booleanPreferencesKey("adblock_enabled")
     val TOTAL_ADS_BLOCKED = intPreferencesKey("total_ads_blocked")
     val TOTAL_TRACKERS_BLOCKED = intPreferencesKey("total_trackers_blocked")
@@ -47,10 +43,8 @@ class BrowserPreferencesRepository(private val context: Context) {
   val preferencesFlow: Flow<BrowserPreferencesState> = context.browserDataStore.data.map { prefs ->
     BrowserPreferencesState(
       searchEngine = SearchEngine.fromId(prefs[Keys.SEARCH_ENGINE] ?: SearchEngine.GOOGLE.id),
-      weatherCity = prefs[Keys.WEATHER_CITY] ?: "Москва",
       showWeatherWidget = prefs[Keys.SHOW_WEATHER] ?: true,
-      showSpeedDial = prefs[Keys.SHOW_SPEED_DIAL] ?: true,
-      showShieldSummary = prefs[Keys.SHOW_SHIELD_SUMMARY] ?: true,
+      showSpeedDial = prefs[Keys.SHOW_SPEED_DIAL] ?: false,
       adBlockEnabled = prefs[Keys.ADBLOCK_ENABLED] ?: true,
       totalAdsBlocked = prefs[Keys.TOTAL_ADS_BLOCKED] ?: 0,
       totalTrackersBlocked = prefs[Keys.TOTAL_TRACKERS_BLOCKED] ?: 0,
@@ -64,20 +58,12 @@ class BrowserPreferencesRepository(private val context: Context) {
     context.browserDataStore.edit { it[Keys.SEARCH_ENGINE] = engine.id }
   }
 
-  suspend fun setWeatherCity(city: String) {
-    context.browserDataStore.edit { it[Keys.WEATHER_CITY] = city.trim().ifEmpty { "Москва" } }
-  }
-
   suspend fun setShowWeatherWidget(show: Boolean) {
     context.browserDataStore.edit { it[Keys.SHOW_WEATHER] = show }
   }
 
   suspend fun setShowSpeedDial(show: Boolean) {
     context.browserDataStore.edit { it[Keys.SHOW_SPEED_DIAL] = show }
-  }
-
-  suspend fun setShowShieldSummary(show: Boolean) {
-    context.browserDataStore.edit { it[Keys.SHOW_SHIELD_SUMMARY] = show }
   }
 
   suspend fun setAdBlockEnabled(enabled: Boolean) {

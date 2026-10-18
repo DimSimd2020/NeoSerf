@@ -1,0 +1,39 @@
+cmake_minimum_required(VERSION 3.21)
+project(NeoSerf VERSION 1.1.0 LANGUAGES CXX)
+include(GNUInstallDirs)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Widgets Network WebEngineWidgets Svg)
+
+set(NEOSERF_SOURCES
+    src/BrowserWindow.cpp src/BrowserWindow.h
+    src/HomePage.cpp src/HomePage.h
+    src/WeatherService.cpp src/WeatherService.h
+    src/AddressResolver.cpp src/AddressResolver.h
+    resources.qrc)
+add_library(neoserf_browser STATIC ${NEOSERF_SOURCES})
+target_include_directories(neoserf_browser PUBLIC src)
+target_link_libraries(neoserf_browser PUBLIC Qt6::Widgets Qt6::Network Qt6::WebEngineWidgets Qt6::Svg)
+if(MSVC)
+    target_compile_options(neoserf_browser PUBLIC /utf-8 /W4)
+endif()
+if(WIN32)
+    target_link_libraries(neoserf_browser PRIVATE dwmapi)
+endif()
+
+qt_add_executable(NeoSerf WIN32 src/main.cpp)
+target_link_libraries(NeoSerf PRIVATE neoserf_browser)
+install(TARGETS NeoSerf RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+qt_generate_deploy_app_script(TARGET NeoSerf OUTPUT_SCRIPT deploy_script NO_UNSUPPORTED_PLATFORM_ERROR)
+install(SCRIPT ${deploy_script})
+
+include(CTest)
+if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(neoserf_tests tests/BrowserTest.cpp)
+    target_link_libraries(neoserf_tests PRIVATE neoserf_browser Qt6::Test)
+    add_test(NAME neoserf_browser COMMAND neoserf_tests)
+endif()

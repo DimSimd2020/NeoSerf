@@ -1,23 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Outer Cyber Shield Ring -->
-    <path
-        android:fillColor="#1F3898EC"
-        android:pathData="M54,24 L80,34 L80,54 C80,71.5 68.9,85.2 54,90 C39.1,85.2 28,71.5 28,54 L28,34 Z" />
-    <!-- Bold Neon Blue Shield Outline & Globe Compass -->
-    <path
-        android:fillColor="#3898EC"
-        android:pathData="M54,27 L76,35.5 L76,54 C76,69.1 66.6,81.1 54,85.5 C41.4,81.1 32,69.1 32,54 L32,35.5 L54,27 Z M54,32.4 L36.8,39 L36.8,54 C36.8,66.4 44.1,76.3 54,80.3 C63.9,76.3 71.2,66.4 71.2,54 L71.2,39 L54,32.4 Z" />
-    <!-- Stylized N Wave & Compass Needle -->
-    <path
-        android:fillColor="#E6EDF3"
-        android:pathData="M43,65 L43,43 L48.5,43 L59.5,57.5 L59.5,43 L65,43 L65,65 L59.5,65 L48.5,50.5 L48.5,65 Z" />
-    <!-- Top Accent Dot -->
-    <path
-        android:fillColor="#52B69A"
-        android:pathData="M54,36m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#459FFF" android:strokeWidth="5"
+        android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M36,66 L42,38 L66,66 L72,38" />
+    <path android:fillColor="@android:color/transparent"
+        android:strokeColor="#459FFF" android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M32,74 C45,80 65,78 77,69" />
 </vector>

@@ -24,3 +24,9 @@ debug.keystore
 !ci/sideload-debug.keystore
 
 *-debug.log
+
+/app/build/
+/desktop/build*/
+/desktop/dist/
+/artifacts/
+/aqtinstall.log

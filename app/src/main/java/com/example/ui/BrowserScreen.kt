@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -39,7 +40,7 @@ import com.example.ui.auth.signOutUser
 import com.example.ui.components.AdBlockShieldSheet
 import com.example.ui.components.BookmarksSheet
 import com.example.ui.components.BottomBrowserBar
-import com.example.ui.components.BrowserMenuAndCustomizeSheet
+import com.example.ui.components.BrowserMenuPopup
 import com.example.ui.components.HistorySheet
 import com.example.ui.components.PasswordVaultSheet
 import com.example.ui.components.ReaderModeOverlay
@@ -73,6 +74,9 @@ fun BrowserScreen(
   cloudSyncAvailable: Boolean = true,
   onSignedOut: () -> Unit,
 ) {
+  val locationPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+    androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+  ) { viewModel.refreshWeather() }
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
   val credentialManager = remember(cloudSyncAvailable) {
@@ -291,15 +295,11 @@ fun BrowserScreen(
     contentWindowInsets = WindowInsets(0, 0, 0, 0),
     snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
     topBar = {
-      TopOmniboxBar(
+      if (!activeTab.isStartPage) TopOmniboxBar(
         activeTab = activeTab,
-        selectedEngine = preferences.searchEngine,
         isBookmarked = isCurrentUrlBookmarked,
         adBlockEnabled = preferences.adBlockEnabled,
-        onSelectSearchEngine = viewModel::selectSearchEngine,
         onSubmitInput = viewModel::submitAddressOrQuery,
-        onToggleReaderMode = viewModel::toggleReaderMode,
-        onToggleDesktopMode = viewModel::toggleDesktopMode,
         onToggleBookmark = { viewModel.toggleBookmarkForActiveTab() },
         onReload = { viewModel.reloadOrGoBack(goBack = false) },
         onOpenShieldSheet = { activeModal = ActiveModal.SHIELD }
@@ -309,12 +309,10 @@ fun BrowserScreen(
       BottomBrowserBar(
         activeTab = activeTab,
         tabCount = tabs.size,
-        totalBlockedCount = preferences.totalAdsBlocked + preferences.totalTrackersBlocked,
         onBack = { viewModel.reloadOrGoBack(goBack = true) },
         onForward = viewModel::goForward,
         onHome = viewModel::navigateHome,
         onOpenTabs = { activeModal = ActiveModal.TABS },
-        onOpenShield = { activeModal = ActiveModal.SHIELD },
         onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE }
       )
     }
@@ -323,6 +321,7 @@ fun BrowserScreen(
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
+        .then(if (activeTab.isStartPage) Modifier.statusBarsPadding() else Modifier)
     ) {
       when {
         activeTab.isStartPage -> {
@@ -331,14 +330,10 @@ fun BrowserScreen(
             preferences = preferences,
             weatherState = weatherState,
             speedDialState = speedDialState,
-            onSelectSearchEngine = viewModel::selectSearchEngine,
             onOpenUrl = viewModel::submitAddressOrQuery,
             onRefreshWeather = { viewModel.refreshWeather() },
-            onChangeWeatherCity = viewModel::updateWeatherCity,
             onAddSpeedDial = viewModel::addSpeedDial,
             onDeleteSpeedDial = viewModel::deleteSpeedDial,
-            onOpenCustomizationSheet = { activeModal = ActiveModal.MENU_CUSTOMIZE },
-            onOpenShieldSheet = { activeModal = ActiveModal.SHIELD }
           )
         }
 
@@ -362,6 +357,40 @@ fun BrowserScreen(
       }
     }
   }
+
+  BrowserMenuPopup(
+    expanded = activeModal == ActiveModal.MENU_CUSTOMIZE,
+    activeTab = activeTab,
+    preferences = preferences,
+    userEmail = userEmail,
+    cloudSyncAvailable = cloudSyncAvailable,
+    onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+    onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
+    onOpenHistory = { activeModal = ActiveModal.HISTORY },
+    onToggleDesktopMode = viewModel::toggleDesktopMode,
+    onToggleReaderMode = viewModel::toggleReaderMode,
+    onSelectSearchEngine = viewModel::selectSearchEngine,
+    onAutofillActiveSite = viewModel::autofillMatchingSiteForActiveTab,
+    onSetShowWeather = viewModel::setShowWeatherWidget,
+    onSetShowSpeedDial = viewModel::setShowSpeedDial,
+    onOpenShield = { activeModal = ActiveModal.SHIELD },
+    onNewTab = { incognito -> viewModel.createNewTab(isIncognito = incognito) },
+    onRefreshWeather = { viewModel.refreshWeather() },
+    onRequestLocation = { locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) },
+    onSignOut = {
+      val manager = credentialManager
+      if (manager != null) {
+        signOutUser(
+          credentialManager = manager,
+          onSignOutComplete = onSignedOut,
+          scope = scope
+        )
+      } else {
+        onSignedOut()
+      }
+    },
+    onDismiss = { activeModal = ActiveModal.NONE }
+  )
 
   when (activeModal) {
     ActiveModal.NONE -> Unit
@@ -390,37 +419,7 @@ fun BrowserScreen(
       )
     }
 
-    ActiveModal.MENU_CUSTOMIZE -> {
-      BrowserMenuAndCustomizeSheet(
-        activeTab = activeTab,
-        preferences = preferences,
-        userEmail = userEmail,
-        cloudSyncAvailable = cloudSyncAvailable,
-        onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
-        onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
-        onOpenHistory = { activeModal = ActiveModal.HISTORY },
-        onToggleDesktopMode = viewModel::toggleDesktopMode,
-        onToggleReaderMode = viewModel::toggleReaderMode,
-        onAutofillActiveSite = viewModel::autofillMatchingSiteForActiveTab,
-        onSelectSearchEngine = viewModel::selectSearchEngine,
-        onSetShowWeather = viewModel::setShowWeatherWidget,
-        onSetShowSpeedDial = viewModel::setShowSpeedDial,
-        onSetShowShieldSummary = viewModel::setShowShieldSummary,
-        onSignOut = {
-          val manager = credentialManager
-          if (manager != null) {
-            signOutUser(
-              credentialManager = manager,
-              onSignOutComplete = onSignedOut,
-              scope = scope
-            )
-          } else {
-            onSignedOut()
-          }
-        },
-        onDismiss = { activeModal = ActiveModal.NONE }
-      )
-    }
+    ActiveModal.MENU_CUSTOMIZE -> Unit
 
     ActiveModal.BOOKMARKS -> {
       BookmarksSheet(

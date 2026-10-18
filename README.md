@@ -2,7 +2,15 @@
 
 A fast, private Android browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.2` (`versionCode` 3). Without Firebase config the app opens a local guest browser instead of crashing.
+**Android:** Kotlin, Jetpack Compose, Gradle. Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.1.0` (`versionCode` 4). Without Firebase config the app opens a local guest browser instead of crashing. The existing guest repository stores bookmarks, history and vault entries in memory; they do not survive process termination.
+
+**Desktop:** native C++17, Qt Widgets and Qt WebEngine. See [desktop build instructions](desktop/README.md). Windows CI builds a portable runtime package; no Tauri, Rust, Electron or Node.js runtime is used by the app.
+
+## Interface and weather
+
+The start page uses a uniform neutral gray (`#191919`), restrained blue accents (`#459fff`), a centered vector logo, search field and compact weather. Search providers, protection and customization are available through the compact translucent overflow menu. Shortcuts can be enabled in Settings; they are hidden by default.
+
+Weather uses [Open-Meteo](https://open-meteo.com/) and detects the network region through [ipwho.is](https://ipwhois.io/). On Android, Settings → Уточнить местоположение requests approximate location permission; once allowed, fresh device coordinates take precedence. Without permission or a usable device location, network detection remains automatic. A VPN can change the network region. No fixed city or invented temperature is substituted for errors. Current conditions refresh every 30 minutes while the widget is enabled. Android requires `INTERNET` and optional `ACCESS_COARSE_LOCATION`; no location API key or background-location permission is needed.
 
 ## Build locally
 
