@@ -183,7 +183,15 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     auto *closeWindow = windowButton("window-close", tr("Закрыть"), "closeWindowButton");
     closeWindow->installEventFilter(this);
     connect(minimize, &QToolButton::clicked, this, &QWidget::showMinimized);
-    connect(maximizeButton, &QToolButton::clicked, this, [this] { isMaximized() ? showNormal() : showMaximized(); });
+    connect(maximizeButton, &QToolButton::clicked, this, [this] {
+#ifdef Q_OS_WIN
+        // Go through Windows like a native caption button, so the button, a double-click and snapping
+        // all produce the same maximized state and restore the same size.
+        SendMessage(reinterpret_cast<HWND>(winId()), WM_SYSCOMMAND, isMaximized() ? SC_RESTORE : SC_MAXIMIZE, 0);
+#else
+        isMaximized() ? showNormal() : showMaximized();
+#endif
+    });
     connect(closeWindow, &QToolButton::clicked, this, &QWidget::close);
     layout->addWidget(tabStrip);
     layout->addWidget(toolbar);
@@ -837,16 +845,17 @@ bool BrowserWindow::nativeEvent(const QByteArray &eventType, void *message, qint
     auto *msg = static_cast<MSG *>(message);
     if (msg->message == WM_NCCALCSIZE && msg->wParam) {
         if (IsZoomed(msg->hwnd)) {
-            // A maximized window overhangs the screen by its frame; keep the content on screen.
-            const UINT dpi = GetDpiForWindow(msg->hwnd);
-            const int padding = GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
-            const int frameX = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padding;
-            const int frameY = GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padding;
+            // A maximized window may overhang the work area by its frame; trim exactly the overhang so the
+            // content stays on screen. Trimming a window that already fits would leave a black border.
             auto &client = reinterpret_cast<NCCALCSIZE_PARAMS *>(msg->lParam)->rgrc[0];
-            client.left += frameX;
-            client.top += frameY;
-            client.right -= frameX;
-            client.bottom -= frameY;
+            MONITORINFO monitor{sizeof(monitor)};
+            if (GetMonitorInfo(MonitorFromRect(&client, MONITOR_DEFAULTTONEAREST), &monitor)) {
+                const RECT &work = monitor.rcWork;
+                client.left = qMax(client.left, work.left);
+                client.top = qMax(client.top, work.top);
+                client.right = qMin(client.right, work.right);
+                client.bottom = qMin(client.bottom, work.bottom);
+            }
         }
         *result = 0;
         return true;

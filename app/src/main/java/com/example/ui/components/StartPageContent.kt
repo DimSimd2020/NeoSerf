@@ -153,8 +153,8 @@ private fun WeatherWidget(state: UiState<WeatherForecast>, onRefresh: () -> Unit
           style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center)
         Spacer(Modifier.height(4.dp))
-        Text("${weather.locationSource} · Open-Meteo",
-          style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Text("${weather.locationSource} · ${weather.dataSource}",
+          style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
           textAlign = TextAlign.Center)
       }
     }

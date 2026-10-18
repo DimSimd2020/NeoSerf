@@ -33,8 +33,8 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     layout->addLayout(top);
     layout->addStretch();
     auto *center = new QWidget(this);
-    center->setMaximumWidth(440);
-    center->setMinimumWidth(400);
+    center->setMaximumWidth(600);
+    center->setMinimumWidth(460);
     auto *content = new QVBoxLayout(center);
     content->setContentsMargins(0, 0, 0, 0);
     content->setSpacing(0);

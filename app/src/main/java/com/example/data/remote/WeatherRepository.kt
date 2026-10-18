@@ -18,9 +18,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
+import kotlin.math.pow
+import kotlin.math.roundToInt
 
 class WeatherRepository(
   private val context: Context? = null,
@@ -30,6 +33,8 @@ class WeatherRepository(
     .callTimeout(12, TimeUnit.SECONDS)
     .build(),
 ) {
+  @Volatile private var openMeteoBlocked = false
+
   private data class Region(val latitude: Double, val longitude: Double, val city: String, val country: String, val source: String)
 
   suspend fun fetchWeather(): Result<WeatherForecast> = withContext(Dispatchers.IO) {
@@ -50,12 +55,26 @@ class WeatherRepository(
           geo.optString("country"), "По сети")
       }
       require(region.latitude in -90.0..90.0 && region.longitude in -180.0..180.0)
-      val forecast = requestJson(
-        "https://api.open-meteo.com/v1/forecast?latitude=${region.latitude}&longitude=${region.longitude}" +
-          "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day" +
-          "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
+      val forecast = if (openMeteoBlocked) null else try {
+        requestJson(
+          "https://api.open-meteo.com/v1/forecast?latitude=${region.latitude}&longitude=${region.longitude}" +
+            "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day" +
+            "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
+        )
+      } catch (_: IOException) {
+        // Open-Meteo is unreachable from some networks; remember it and use MET Norway from now on.
+        openMeteoBlocked = true
+        null
+      }
+      Result.success(
+        if (forecast != null) parseForecast(forecast, region.city, region.country, region.source)
+        else parseMetNo(
+          // MET Norway asks for at most four decimals.
+          requestJson("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f"
+            .format(Locale.US, region.latitude, region.longitude)),
+          region.city, region.country, region.source
+        )
       )
-      Result.success(parseForecast(forecast, region.city, region.country, region.source))
     } catch (cancelled: CancellationException) {
       throw cancelled
     } catch (error: Exception) {
@@ -90,7 +109,7 @@ class WeatherRepository(
   private fun requestJson(url: String): JSONObject {
     val request = Request.Builder().url(url).header("User-Agent", "NeoSerf/1.1").build()
     return httpClient.newCall(request).execute().use { response ->
-      check(response.isSuccessful) { "Метеосервис недоступен: HTTP ${response.code}" }
+      if (!response.isSuccessful) throw IOException("Метеосервис недоступен: HTTP ${response.code}")
       JSONObject(response.body?.string() ?: error("Пустой ответ метеосервиса"))
     }
   }
@@ -113,6 +132,45 @@ class WeatherRepository(
         weatherCode = code, conditionText = mapWeatherCodeToRussian(code),
         dailyMaxC = high, dailyMinC = low, isDay = current.getInt("is_day") == 1,
         locationSource = source
+      )
+    }
+
+    internal fun parseMetNo(json: JSONObject, city: String, country: String, source: String): WeatherForecast {
+      val series = json.getJSONObject("properties").getJSONArray("timeseries")
+      fun details(index: Int) = series.getJSONObject(index).getJSONObject("data").getJSONObject("instant").getJSONObject("details")
+      val data = series.getJSONObject(0).getJSONObject("data")
+      val now = details(0)
+      val temperature = now.getDouble("air_temperature")
+      val humidity = now.getDouble("relative_humidity").roundToInt()
+      val wind = now.getDouble("wind_speed") * 3.6
+      fun symbolOf(period: String) = data.optJSONObject(period)?.optJSONObject("summary")?.optString("symbol_code").orEmpty()
+      val symbol = symbolOf("next_1_hours").ifEmpty { symbolOf("next_6_hours") }
+      require(symbol.isNotEmpty())
+      // The compact forecast is hourly at first, so the next 24 entries give the day's range.
+      val day = (0 until minOf(series.length(), 24)).map { details(it).getDouble("air_temperature") }
+      // Wind chill (Environment Canada formula) below 10 °C with wind; otherwise the air temperature.
+      val apparent = if (temperature <= 10 && wind > 4.8)
+        13.12 + 0.6215 * temperature - 11.37 * wind.pow(0.16) + 0.3965 * temperature * wind.pow(0.16) else temperature
+      require((day + listOf(temperature, apparent, wind)).all { it.isFinite() } && humidity in 0..100)
+      // Map MET symbols onto the WMO codes used by Open-Meteo, so both sources read the same.
+      val kind = symbol.substringBefore('_')
+      val code = when {
+        "thunder" in kind -> 95
+        "snow" in kind -> 73
+        "sleet" in kind || "rain" in kind -> if (kind.startsWith("light")) 61 else 63
+        kind == "fog" -> 45
+        kind == "clearsky" -> 0
+        kind == "fair" -> 1
+        kind == "partlycloudy" -> 2
+        kind == "cloudy" -> 3
+        else -> -1
+      }
+      return WeatherForecast(
+        cityName = city, country = country, temperatureC = temperature,
+        apparentTempC = apparent, windSpeedKmh = wind, humidityPercent = humidity,
+        weatherCode = code, conditionText = mapWeatherCodeToRussian(code),
+        dailyMaxC = day.max(), dailyMinC = day.min(), isDay = !symbol.endsWith("_night"),
+        locationSource = source, dataSource = "MET Norway"
       )
     }
 

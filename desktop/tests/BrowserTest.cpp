@@ -40,6 +40,51 @@
 #include <QWebEnginePage>
 #include <QWebEngineProfile>
 #include <QWebEngineView>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#endif
+
+// The native client area of a maximized window is exactly what Qt draws, so nothing is cut off
+// or left black, and the caption buttons are fully inside the work area.
+static bool maximizedFits(QWidget &window)
+{
+    QTest::qWait(300);
+    auto *close = window.findChild<QToolButton *>("closeWindowButton");
+    auto *minimize = window.findChild<QToolButton *>("minimizeButton");
+    if (!window.screen()->availableGeometry().contains(close->mapToGlobal(close->rect().center()))) return false;
+#ifdef Q_OS_WIN
+    const auto hwnd = reinterpret_cast<HWND>(window.winId());
+    const qreal ratio = window.devicePixelRatio();
+    RECT client, frame;
+    GetClientRect(hwnd, &client);
+    GetWindowRect(hwnd, &frame);
+    MONITORINFO monitor{sizeof(monitor)};
+    GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor);
+    qInfo() << "maximized: Qt" << window.geometry() << "x" << ratio << "zoomed" << bool(IsZoomed(hwnd)) << "window" << frame.left << frame.top << frame.right << frame.bottom
+            << "client" << client.right << client.bottom << "work" << monitor.rcWork.left << monitor.rcWork.top
+            << monitor.rcWork.right << monitor.rcWork.bottom;
+    // Windows itself must see the window as maximized, or snapping and restoring disagree with Qt.
+    if (!IsZoomed(hwnd)) return false;
+    if (qAbs(client.right - qRound(window.width() * ratio)) > 1 || qAbs(client.bottom - qRound(window.height() * ratio)) > 1) return false;
+    // Every visible pixel of the window is client area that Qt paints: no unpainted black frame.
+    POINT origin{0, 0};
+    ClientToScreen(hwnd, &origin);
+    RECT visible;
+    IntersectRect(&visible, &frame, &monitor.rcWork);
+    if (origin.x != visible.left || origin.y != visible.top || client.right != visible.right - visible.left
+        || client.bottom != visible.bottom - visible.top) return false;
+    auto onScreen = [&](QWidget *button, const QPoint &corner) {
+        const auto logical = button->mapTo(&window, corner);
+        POINT point{LONG(logical.x() * ratio), LONG(logical.y() * ratio)};
+        ClientToScreen(hwnd, &point);
+        return PtInRect(&monitor.rcWork, point);
+    };
+    return onScreen(minimize, minimize->rect().topLeft()) && onScreen(close, close->rect().bottomRight());
+#else
+    Q_UNUSED(minimize);
+    return true;
+#endif
+}
 
 class BrowserTest : public QObject {
     Q_OBJECT
@@ -310,7 +355,7 @@ private slots:
         QVERIFY(send && send->isHidden());
         search->setText(QString::fromUtf8("погода"));
         QVERIFY(send->isVisible());
-        QVERIFY(search->width() <= 440);
+        QVERIFY(search->width() >= 460 && search->width() <= 600);
         const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
         if (!artifacts.isEmpty()) {
             address->setText("https://example.com");
@@ -416,6 +461,14 @@ private slots:
         QVERIFY(popup && popup->isVisible());
         QVERIFY(popup->testAttribute(Qt::WA_TranslucentBackground));
         QCOMPARE(popup->actions().size(), 2);
+        // Rows are drawn on the card's own colour, without a darker square behind them.
+        auto *row = camera->parentWidget();
+        auto *card = row->parentWidget();
+        QCOMPARE(card->objectName(), QString("settingsCard"));
+        const auto cardShot = card->grab().toImage();
+        const qreal shotRatio = cardShot.devicePixelRatio();
+        const int middle = row->geometry().center().y();
+        QCOMPARE(cardShot.pixelColor(QPoint(10, middle) * shotRatio), cardShot.pixelColor(QPoint(row->x() + camera->x() - 3, middle) * shotRatio));
         const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
         QTest::qWait(250);
         if (!artifacts.isEmpty()) {
@@ -533,9 +586,28 @@ private slots:
         QCOMPARE(maximize->property("neoIcon").toString(), QString("restore"));
         // Content stays on screen when maximized.
         QVERIFY(window.screen()->availableGeometry().contains(close->mapToGlobal(close->rect().center())));
+        QVERIFY2(maximizedFits(window), "maximized with the button");
         maximize->click();
         QTRY_VERIFY(!window.isMaximized());
+#ifdef Q_OS_WIN
+        // Maximizing the Windows way (double-click on the caption, snapping, Win+Up) behaves the same.
+        const auto hwnd = reinterpret_cast<HWND>(window.winId());
+        SendMessage(hwnd, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
+        QTRY_VERIFY(window.isMaximized());
+        QVERIFY2(maximizedFits(window), "maximized by Windows");
+        // The session reopens maximized and still fits.
         window.close();
+        BrowserWindow reopened;
+        reopened.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&reopened));
+        QTRY_VERIFY(reopened.isMaximized());
+        QVERIFY2(maximizedFits(reopened), "reopened maximized");
+        reopened.findChild<QToolButton *>("maximizeButton")->click();
+        QTRY_VERIFY(!reopened.isMaximized());
+        reopened.close();
+#else
+        window.close();
+#endif
     }
 
     void preferencesFallBackToSafeDefaults()

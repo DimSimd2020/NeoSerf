@@ -107,7 +107,8 @@ QWidget#navIndicator { background: @selection@; border-radius: 20px; }
 QLabel#sectionTitle { font-size: 24px; font-weight: 600; }
 QLabel#cardHeading { font-size: 15px; font-weight: 600; padding: 4px 4px 2px 4px; }
 QFrame#settingsCard { background: @field@; border-radius: 16px; }
-QFrame#settingsCard QLabel { background: transparent; }
+QFrame#settingsCard > QWidget, QFrame#settingsCard QLabel, QFrame#settingsCard QCheckBox, QFrame#settingsCard QToolButton#chooseProfile { background: transparent; }
+QFrame#settingsCard > QFrame#rowDivider { background: @border@; }
 QFrame#settingsCard QComboBox, QFrame#settingsCard QLineEdit { background: @background@; }
 QFrame#settingsCard QComboBox:hover { background: @hover@; }
 QFrame#settingsCard QToolButton#importSource, QFrame#settingsCard QPushButton[chip="true"] { background: @background@; }
