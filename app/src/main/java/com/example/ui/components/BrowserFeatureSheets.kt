@@ -338,7 +338,10 @@ fun AdBlockShieldSheet(
         Text(
           text = stringResource(R.string.adblock_enabled),
           style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onSurface
+          color = MaterialTheme.colorScheme.onSurface,
+          modifier = Modifier
+            .weight(1f)
+            .padding(end = 12.dp)
         )
         Switch(
           checked = preferences.adBlockEnabled,

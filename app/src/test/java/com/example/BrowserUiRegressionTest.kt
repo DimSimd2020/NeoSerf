@@ -5,6 +5,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -35,6 +36,7 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithTag("start_page").assertDoesNotExist()
     composeRule.onNodeWithTag("search_engine_selector").assertDoesNotExist()
     composeRule.onNodeWithTag("browser_overflow_menu").assertDoesNotExist()
+    composeRule.onNodeWithTag("adblock_master_switch").assertDoesNotExist()
     composeRule.onNodeWithTag("omnibox_input").assertTextContains("example.com", substring = true)
   }
 
@@ -76,6 +78,22 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_regular").assertIsDisplayed()
+  }
+
+  @Test fun newTabStartsWithAnEmptySearchField() {
+    composeRule.onNodeWithTag("omnibox_input").performTextInput("unfinished query")
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_new_tab").performClick()
+    composeRule.onNodeWithTag("omnibox_input").assertTextEquals("")
+  }
+
+  @Test fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_item_shield").performClick()
+    composeRule.onNodeWithTag("adblock_master_switch").assertIsDisplayed()
+    val label = composeRule.onNodeWithText("Блокировка рекламы и трекеров").fetchSemanticsNode().boundsInRoot
+    val toggle = composeRule.onNodeWithTag("adblock_master_switch").fetchSemanticsNode().boundsInRoot
+    assertTrue(label.right <= toggle.left)
   }
 }
 

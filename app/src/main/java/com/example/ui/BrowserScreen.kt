@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -194,6 +195,9 @@ fun BrowserScreen(
     }
     attachBrowserClients(created)
     webView = created
+    // The first navigation can precede the SharedFlow collector while WebView is
+    // being created. Start that pending URL as soon as the view is created.
+    if (currentTabState.url.isNotBlank()) created.loadUrl(currentTabState.url)
     return created
   }
 
@@ -325,16 +329,18 @@ fun BrowserScreen(
     ) {
       when {
         activeTab.isStartPage -> {
-          StartPageContent(
-            isIncognito = activeTab.isIncognito,
-            preferences = preferences,
-            weatherState = weatherState,
-            speedDialState = speedDialState,
-            onOpenUrl = viewModel::submitAddressOrQuery,
-            onRefreshWeather = { viewModel.refreshWeather() },
-            onAddSpeedDial = viewModel::addSpeedDial,
-            onDeleteSpeedDial = viewModel::deleteSpeedDial,
-          )
+          key(activeTab.id) {
+            StartPageContent(
+              isIncognito = activeTab.isIncognito,
+              preferences = preferences,
+              weatherState = weatherState,
+              speedDialState = speedDialState,
+              onOpenUrl = viewModel::submitAddressOrQuery,
+              onRefreshWeather = { viewModel.refreshWeather() },
+              onAddSpeedDial = viewModel::addSpeedDial,
+              onDeleteSpeedDial = viewModel::deleteSpeedDial,
+            )
+          }
         }
 
         activeTab.isReaderMode -> {
