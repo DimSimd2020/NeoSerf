@@ -2,7 +2,7 @@
 
 A fast, private Android browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.4` (`versionCode` 5). Without Firebase config the app opens a local guest browser instead of crashing.
+**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.5` (`versionCode` 6). Without Firebase config the app opens a local guest browser instead of crashing.
 
 ## Build locally
 

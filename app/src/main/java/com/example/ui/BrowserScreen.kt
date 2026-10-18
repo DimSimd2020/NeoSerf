@@ -12,6 +12,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,7 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -108,6 +113,42 @@ fun BrowserScreen(
   }
 
   var webView by remember { mutableStateOf<WebView?>(null) }
+  val contentFocusRequester = remember { FocusRequester() }
+  val keyboardController = LocalSoftwareKeyboardController.current
+  var pendingContentFocus by remember { mutableStateOf(false) }
+
+  fun moveFocusToContent() {
+    keyboardController?.hide()
+    pendingContentFocus = true
+    val wv = webView
+    if (wv != null) {
+      wv.isFocusable = true
+      wv.isFocusableInTouchMode = true
+      wv.requestFocus()
+    }
+    try {
+      contentFocusRequester.requestFocus()
+    } catch (_: IllegalStateException) {
+      // Content requester is attached after first layout; retry below.
+    }
+  }
+
+  LaunchedEffect(pendingContentFocus, webView, activeTab.isStartPage) {
+    if (!pendingContentFocus) return@LaunchedEffect
+    keyboardController?.hide()
+    val wv = webView
+    if (wv != null && !activeTab.isStartPage) {
+      wv.isFocusable = true
+      wv.isFocusableInTouchMode = true
+      wv.requestFocus()
+    }
+    try {
+      contentFocusRequester.requestFocus()
+    } catch (_: IllegalStateException) {
+      return@LaunchedEffect
+    }
+    pendingContentFocus = false
+  }
 
   fun attachBrowserClients(target: WebView) {
     target.webViewClient = object : WebViewClient() {
@@ -186,6 +227,8 @@ fun BrowserScreen(
         ViewGroup.LayoutParams.MATCH_PARENT,
         ViewGroup.LayoutParams.MATCH_PARENT
       )
+      isFocusable = true
+      isFocusableInTouchMode = true
       applyNeoSerfWebSettings()
     }
     attachBrowserClients(created)
@@ -302,7 +345,8 @@ fun BrowserScreen(
         onToggleDesktopMode = viewModel::toggleDesktopMode,
         onToggleBookmark = { viewModel.toggleBookmarkForActiveTab() },
         onReload = { viewModel.reloadOrGoBack(goBack = false) },
-        onOpenShieldSheet = { activeModal = ActiveModal.SHIELD }
+        onOpenShieldSheet = { activeModal = ActiveModal.SHIELD },
+        onMoveFocusToContent = { moveFocusToContent() }
       )
     },
     bottomBar = {
@@ -323,6 +367,9 @@ fun BrowserScreen(
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
+        .focusRequester(contentFocusRequester)
+        .focusable()
+        .testTag("browser_content")
     ) {
       when {
         activeTab.isStartPage -> {
