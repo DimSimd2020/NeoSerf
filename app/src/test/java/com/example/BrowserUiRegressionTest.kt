@@ -1,10 +1,24 @@
 package com.example
 
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.hasTestTag
@@ -18,6 +32,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.dp
 import com.example.data.model.BrowserTab
 import com.example.ui.components.TopOmniboxBar
 import com.example.ui.theme.NeoSerfTheme
@@ -91,6 +106,19 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithTag("adblock_master_switch").assertDoesNotExist()
   }
 
+  @Test
+  fun hardwareEnterMovesFocusToContent() {
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_input").performClick()
+    composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
+    composeRule.onNodeWithTag("omnibox_input").performKeyInput {
+      pressKey(Key.Enter)
+    }
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_input").assertIsNotFocused()
+    composeRule.onNodeWithTag("browser_content").assertIsFocused()
+  }
+
   @Test fun tabsSheetFitsNarrowWidth() {
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
@@ -143,7 +171,7 @@ class BrowserUiRegressionWideTest {
   }
 }
 
-@OptIn(ExperimentalTestApi::class)
+@OptIn(ExperimentalTestApi::class, ExperimentalComposeUiApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "w360dp-h720dp-xhdpi")
 class OmniboxSubmitGuardTest {
@@ -167,21 +195,116 @@ class OmniboxSubmitGuardTest {
     assertEquals(1, submits)
   }
 
+  @Test
+  fun hardwareEnterInKeyboardModeMovesFocusToContent() {
+    lateinit var inputModeManager: InputModeManager
+    val contentFocus = FocusRequester()
+    var submits = 0
+    composeRule.setContent {
+      inputModeManager = LocalInputModeManager.current
+      NeoSerfTheme {
+        Column {
+          TopOmniboxBar(
+            activeTab = BrowserTab(),
+            isBookmarked = false,
+            adBlockEnabled = true,
+            onSubmitInput = { submits++ },
+            onToggleBookmark = {},
+            onReload = {},
+            onOpenShieldSheet = {},
+            onMoveFocusToContent = { contentFocus.requestFocus() },
+          )
+          Box(
+            modifier = Modifier
+              .size(16.dp)
+              .focusRequester(contentFocus)
+              .focusable()
+              .testTag("browser_content")
+          )
+        }
+      }
+    }
+    composeRule.runOnIdle {
+      assertTrue(inputModeManager.requestInputMode(InputMode.Keyboard))
+    }
+    val node = composeRule.onNodeWithTag("omnibox_input")
+    node.performClick()
+    node.performTextInput("example.com")
+    node.performKeyInput { pressKey(Key.Enter) }
+    composeRule.waitForIdle()
+    assertEquals(1, submits)
+    composeRule.onNodeWithTag("omnibox_input").assertIsNotFocused()
+    composeRule.onNodeWithTag("browser_content").assertIsFocused()
+  }
+
+  @Test
+  fun imeGoInKeyboardModeMovesFocusToContent() {
+    lateinit var inputModeManager: InputModeManager
+    val contentFocus = FocusRequester()
+    var submits = 0
+    composeRule.setContent {
+      inputModeManager = LocalInputModeManager.current
+      NeoSerfTheme {
+        Column {
+          TopOmniboxBar(
+            activeTab = BrowserTab(),
+            isBookmarked = false,
+            adBlockEnabled = true,
+            onToggleBookmark = {},
+            onReload = {},
+            onOpenShieldSheet = {},
+            onSubmitInput = { submits++ },
+            onMoveFocusToContent = { contentFocus.requestFocus() },
+          )
+          Box(
+            modifier = Modifier
+              .size(16.dp)
+              .focusRequester(contentFocus)
+              .focusable()
+              .testTag("browser_content")
+          )
+        }
+      }
+    }
+    composeRule.runOnIdle {
+      assertTrue(inputModeManager.requestInputMode(InputMode.Keyboard))
+    }
+    val node = composeRule.onNodeWithTag("omnibox_input")
+    node.performClick()
+    node.performTextInput("example.com")
+    node.performImeAction()
+    composeRule.waitForIdle()
+    assertEquals(1, submits)
+    composeRule.onNodeWithTag("omnibox_input").assertIsNotFocused()
+    composeRule.onNodeWithTag("browser_content").assertIsFocused()
+  }
+
   private fun submitFromOmnibox(
     submit: (SemanticsNodeInteraction) -> Unit,
   ): Int {
     var submits = 0
+    val contentFocus = FocusRequester()
     composeRule.setContent {
       NeoSerfTheme {
-        TopOmniboxBar(
-          activeTab = BrowserTab(),
-          isBookmarked = false,
-          adBlockEnabled = true,
-          onSubmitInput = { submits++ },
-          onToggleBookmark = {},
-          onReload = {},
-          onOpenShieldSheet = {},
-        )
+        Column {
+          TopOmniboxBar(
+            activeTab = BrowserTab(),
+            isBookmarked = false,
+            adBlockEnabled = true,
+            onSubmitInput = { submits++ },
+            onToggleBookmark = {},
+            onReload = {},
+            onOpenShieldSheet = {},
+            onMoveFocusToContent = { contentFocus.requestFocus() },
+          )
+          Box(
+            modifier = Modifier
+              .size(16.dp)
+              .focusRequester(contentFocus)
+              .focusable()
+              .testTag("browser_content")
+          )
+        }
       }
     }
     val node = composeRule.onNodeWithTag("omnibox_input")
