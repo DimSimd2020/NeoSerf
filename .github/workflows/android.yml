@@ -34,13 +34,17 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          # Google no longer serves the legacy `tools` package that v3 installs by default.
+          packages: platform-tools
 
       - name: Install Android SDK platforms
         run: |
-          set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || true
+          set -eu
+          # Finite "y" feed: `yes | sdkmanager --licenses` fails under pipefail after sdkmanager exits.
+          for _ in $(seq 1 30); do echo y; done | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "platforms;android-36" "build-tools;36.0.0" || true
           sdkmanager --install "platforms;android-36.1" || true
 
       - name: Configure Android signing
