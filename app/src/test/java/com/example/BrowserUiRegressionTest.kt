@@ -45,6 +45,28 @@ class BrowserUiRegressionTest {
   }
 
   @Test
+  fun hardwareEnterDoesNotOpenShieldSheet() {
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_input").performClick()
+    composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
+    composeRule.onNodeWithTag("omnibox_input").performKeyInput {
+      pressKey(Key.Enter)
+    }
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("adblock_master_switch").assertDoesNotExist()
+    composeRule.onNodeWithText("Блокировка рекламы и трекеров").assertDoesNotExist()
+  }
+
+  @Test
+  fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("omnibox_shield_badge").performClick()
+    composeRule.waitForIdle()
+    composeRule.onNodeWithTag("adblock_master_switch").assertIsDisplayed()
+    composeRule.onNodeWithText("Блокировка рекламы и трекеров").assertIsDisplayed()
+  }
+
+  @Test
   fun imeGoDoesNotOpenSearchEngineDropdown() {
     composeRule.waitForIdle()
     composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
