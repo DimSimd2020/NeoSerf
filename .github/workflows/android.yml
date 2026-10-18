@@ -1,0 +1,147 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platforms
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0" || true
+          sdkmanager --install "platforms;android-36.1" || true
+
+      - name: Configure Android signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          SIGN_DIR="${RUNNER_TEMP}/android-signing"
+          mkdir -p "$SIGN_DIR"
+          KEYSTORE_FILE="$SIGN_DIR/release.jks"
+
+          if [ -n "${KEYSTORE_BASE64}" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_FILE"
+            if [ -z "${KEYSTORE_PASSWORD}" ] || [ -z "${KEY_ALIAS}" ] || [ -z "${KEY_PASSWORD}" ]; then
+              echo "KEYSTORE_BASE64 is set, but KEYSTORE_PASSWORD, KEY_ALIAS, and KEY_PASSWORD are all required." >&2
+              exit 1
+            fi
+            echo "Release signing: using repository keystore secrets"
+          else
+            KEYSTORE_PASSWORD=android
+            KEY_ALIAS=upload
+            KEY_PASSWORD=android
+            keytool -genkeypair -batch \
+              -storetype JKS \
+              -keystore "$KEYSTORE_FILE" \
+              -alias "$KEY_ALIAS" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "$KEYSTORE_PASSWORD" \
+              -keypass "$KEY_PASSWORD" \
+              -dname "CN=NeoSerf CI, OU=CI, O=NeoSerf, C=US"
+            echo "Release signing: no keystore secrets; generated a self-signed CI keystore"
+          fi
+
+          {
+            echo "KEYSTORE_PATH=$KEYSTORE_FILE"
+            echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "STORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "KEY_ALIAS=$KEY_ALIAS"
+            echo "KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+          # The debug build type points at ${rootDir}/debug.keystore.
+          if [ ! -f "$GITHUB_WORKSPACE/debug.keystore" ]; then
+            keytool -genkeypair -batch \
+              -storetype JKS \
+              -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+              -alias androiddebugkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass android \
+              -keypass android \
+              -dname "CN=Android Debug, O=Android, C=US"
+          fi
+
+      - name: Build release APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease --stacktrace --no-daemon
+
+      - name: Stage APK
+        id: apk
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          SOURCE_APK="$(find app/build/outputs/apk -name '*.apk' -type f | head -n 1)"
+          if [ -z "$SOURCE_APK" ]; then
+            echo "No APK produced under app/build/outputs/apk" >&2
+            find app/build/outputs -type f || true
+            exit 1
+          fi
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            APK_NAME="NeoSerf-${GITHUB_REF_NAME}.apk"
+          else
+            APK_NAME="NeoSerf-1.0.apk"
+          fi
+
+          cp "$SOURCE_APK" "dist/${APK_NAME}"
+          echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "apk_path=dist/${APK_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Staged ${APK_NAME} from ${SOURCE_APK} ($(du -h "dist/${APK_NAME}" | cut -f1))"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSerf-apk
+          path: ${{ steps.apk.outputs.apk_path }}
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.apk.outputs.apk_path }}" \
+            --title "NeoSerf ${GITHUB_REF_NAME}" \
+            --generate-notes
