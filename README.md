@@ -2,7 +2,7 @@
 
 A fast, private Android browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.1` (`versionCode` 2). Without Firebase config the app opens a local guest browser instead of crashing.
+**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.2` (`versionCode` 3). Without Firebase config the app opens a local guest browser instead of crashing.
 
 ## Build locally
 
@@ -14,7 +14,7 @@ Requirements: JDK 21 and the Android SDK (`compileSdk` 36.1, `minSdk` 24).
 
 The APK is written to `app/build/outputs/apk/release/`.
 
-Release signing uses a keystore at `KEYSTORE_PATH` (default `my-upload-key.jks`) with alias `upload`, matching the AI Studio layout. Do not commit keystores.
+Release signing uses a keystore at `KEYSTORE_PATH` (default `my-upload-key.jks`) with alias `upload`, matching the AI Studio layout. Do not commit production keystores.
 
 ## CI
 
@@ -29,7 +29,7 @@ The APK is uploaded as the `NeoSerf-apk` workflow artifact. Pushing a `v*` tag a
 
 ## Release signing secrets
 
-If no release keystore secrets are configured, CI generates a **self-signed** keystore and still produces an APK that installs (Android will prompt to allow unknown sources). That signature is for CI/sideload only, not Play Console uploads.
+If no release keystore secrets are configured, CI signs with the committed **sideload-only** keystore `ci/sideload-debug.keystore` (alias `androiddebugkey`, password `android`). That signature is stable across CI runs so consecutive sideload APKs can update each other (`adb install -r`). It is **not** for Play Console or production.
 
 To sign with your own upload keystore, add these repository secrets (`Settings → Secrets and variables → Actions`):
 

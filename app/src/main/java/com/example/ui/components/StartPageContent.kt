@@ -62,6 +62,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
@@ -507,17 +509,13 @@ private fun ShieldSummaryCard(
       .clickable { onClick() }
       .testTag("shield_summary_card")
   ) {
-    Row(
+    Column(
       modifier = Modifier
         .fillMaxWidth()
         .padding(18.dp),
-      horizontalArrangement = Arrangement.SpaceBetween,
-      verticalAlignment = Alignment.CenterVertically
+      verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-      Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.weight(1f)
-      ) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
           modifier = Modifier
             .size(44.dp)
@@ -542,21 +540,32 @@ private fun ShieldSummaryCard(
           )
         }
         Spacer(modifier = Modifier.width(12.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
           Text(
             text = stringResource(R.string.adblock_title),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface
+            style = MaterialTheme.typography.titleMedium.copy(
+              hyphens = Hyphens.None,
+              lineBreak = LineBreak.Simple
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.testTag("shield_summary_title")
           )
           Text(
             text = if (adBlockEnabled) "Активна фильтрация рекламы и трекеров" else "Фильтрация отключена",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
           )
         }
       }
 
-      Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+      ) {
         StatMetricColumn(value = adsBlocked.toString(), label = "Реклама")
         StatMetricColumn(value = trackersBlocked.toString(), label = "Трекеры")
         StatMetricColumn(value = savedLabel, label = "Трафик")

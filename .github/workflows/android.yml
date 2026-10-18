@@ -84,19 +84,17 @@ jobs:
             fi
             echo "Release signing: using repository keystore secrets"
           else
+            # Stable sideload-only keystore so consecutive CI APKs can update each other.
+            # NOT for Play / production. Committed at ci/sideload-debug.keystore.
+            KEYSTORE_FILE="$GITHUB_WORKSPACE/ci/sideload-debug.keystore"
+            if [ ! -f "$KEYSTORE_FILE" ]; then
+              echo "Committed sideload debug keystore missing at ci/sideload-debug.keystore" >&2
+              exit 1
+            fi
             KEYSTORE_PASSWORD=android
-            KEY_ALIAS=upload
+            KEY_ALIAS=androiddebugkey
             KEY_PASSWORD=android
-            keytool -genkeypair \
-              -keystore "$KEYSTORE_FILE" \
-              -alias "$KEY_ALIAS" \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass "$KEYSTORE_PASSWORD" \
-              -keypass "$KEY_PASSWORD" \
-              -dname "CN=NeoSerf CI, OU=CI, O=NeoSerf, C=US"
-            echo "Release signing: no keystore secrets; generated a self-signed CI keystore"
+            echo "Release signing: KEYSTORE_* secrets absent; using committed sideload debug keystore (not for production)"
           fi
 
           {
@@ -125,6 +123,8 @@ jobs:
           chmod +x ./gradlew
           ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon \
             --tests 'com.example.GuestModeWithoutFirebaseTest' \
+            --tests 'com.example.BrowserUiRegressionTest' \
+            --tests 'com.example.BrowserUiRegressionWideTest' \
             --tests 'com.example.data.repository.LocalBrowserSyncRepositoryTest'
 
       - name: Build release APK

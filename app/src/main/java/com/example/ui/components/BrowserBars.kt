@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,11 +59,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -133,7 +145,20 @@ fun TopOmniboxBar(
                 color = accentColor.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(12.dp)
               )
-              .clickable { showEngineMenu = true }
+              .focusProperties { canFocus = false }
+              .onPreviewKeyEvent { event ->
+                event.key == Key.Enter || event.key == Key.NumPadEnter
+              }
+              .semantics {
+                role = Role.Button
+                onClick {
+                  showEngineMenu = true
+                  true
+                }
+              }
+              .pointerInput(Unit) {
+                detectTapGestures(onTap = { showEngineMenu = true })
+              }
               .padding(horizontal = 10.dp)
               .testTag("search_engine_selector"),
             verticalAlignment = Alignment.CenterVertically
@@ -270,13 +295,24 @@ fun TopOmniboxBar(
               ),
               keyboardActions = KeyboardActions(
                 onGo = {
-                  focusManager.clearFocus()
                   onSubmitInput(textValue)
+                  focusManager.clearFocus(force = true)
                 }
               ),
               modifier = Modifier
                 .fillMaxWidth()
                 .onFocusChanged { state -> isFocused = state.isFocused }
+                .onPreviewKeyEvent { event ->
+                  val isEnter = event.key == Key.Enter || event.key == Key.NumPadEnter
+                  if (!isEnter) return@onPreviewKeyEvent false
+                  if (event.type == KeyEventType.KeyDown) {
+                    onSubmitInput(textValue)
+                    focusManager.clearFocus(force = true)
+                  }
+                  // Consume KeyDown and KeyUp so Enter is not delivered as a click
+                  // to the search-engine selector after focus leaves the field.
+                  true
+                }
                 .testTag("omnibox_input")
             )
           }
