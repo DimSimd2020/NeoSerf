@@ -8,7 +8,7 @@ class QCloseEvent;
 class QLineEdit;
 class QProgressBar;
 class QStackedWidget;
-class QTabWidget;
+class QTabBar;
 class QToolBar;
 class QWebEngineProfile;
 class QWebEngineView;
@@ -37,7 +37,8 @@ private:
     void configureProfile(QWebEngineProfile *profile);
     void saveSession();
     QSettings settings;
-    QTabWidget *tabs;
+    QTabBar *tabs;
+    QStackedWidget *pages;
     QToolBar *toolbar;
     QLineEdit *address;
     QProgressBar *progress;

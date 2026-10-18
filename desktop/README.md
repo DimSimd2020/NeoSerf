@@ -25,6 +25,8 @@ cmake --install desktop/build --config Release --prefix /absolute/path/to/packag
 
 ## Behavior
 
+- Compact tabs above the address bar, with the active tab joining the navigation surface. The new-tab button stays next to the tab strip; excess tabs scroll. Dragging tabs also reorders the restored session.
+
 - Settings → Оформление: follow the system (default), light or dark. The system mode updates an open window when the device theme changes; manual choices persist. SVG action icons, menus, dialogs, form controls and the title bar use the selected palette.
 
 - Real web browsing, back/forward, reload, home, multiple tabs and new-tab links.

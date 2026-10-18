@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="79 91 354 354" width="512" height="512">
   <defs>
     <linearGradient id="fin1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#60A5FA" />
@@ -9,7 +9,6 @@
       <stop offset="100%" stop-color="#00F0FF" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="115" fill="#0D0F12" />
   <path d="M 135 375 C 135 240, 175 140, 235 115 L 285 265 L 200 375 Z" fill="url(#fin1)" />
   <path d="M 377 115 C 377 250, 337 350, 277 375 L 227 225 L 312 115 Z" fill="url(#fin2)" />
   <path d="M 95 405 Q 256 445 417 385 Q 256 415 95 405 Z" fill="#38BDF8" />

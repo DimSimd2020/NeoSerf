@@ -15,6 +15,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
+#include <QHBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
@@ -25,11 +26,11 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QTabBar>
-#include <QTabWidget>
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -44,6 +45,22 @@
 #include <windows.h>
 #include <dwmapi.h>
 #endif
+
+class CompactTabBar : public QTabBar {
+public:
+    using QTabBar::QTabBar;
+    QSize minimumSizeHint() const override
+    {
+        const auto minimum = QTabBar::minimumSizeHint();
+        return QSize(qMin(minimum.width(), sizeHint().width()), minimum.height());
+    }
+protected:
+    QSize tabSizeHint(int index) const override
+    {
+        const auto size = QTabBar::tabSizeHint(index);
+        return QSize(qBound(152, size.width(), 176), 34);
+    }
+};
 
 BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(this)
 {
@@ -65,8 +82,9 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     configureProfile(regularProfile);
     configureProfile(privateProfile);
 
-    toolbar = addToolBar(tr("Навигация"));
+    toolbar = new QToolBar(tr("Навигация"), this);
     toolbar->setMovable(false);
+    toolbar->setFloatable(false);
     toolbar->setObjectName("navigationBar");
     auto addButton = [this](const QString &text, const QString &tip, const QString &name, auto callback) {
         auto *button = new QToolButton(toolbar);
@@ -107,26 +125,53 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     auto *layout = new QVBoxLayout(central);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
+    auto *tabStrip = new QWidget(central);
+    tabStrip->setObjectName("tabStrip");
+    auto *tabLayout = new QHBoxLayout(tabStrip);
+    tabLayout->setContentsMargins(12, 6, 12, 0);
+    tabLayout->setSpacing(6);
+    tabs = new CompactTabBar(tabStrip);
+    tabs->setObjectName("browserTabs");
+    tabs->setMovable(true);
+    tabs->setExpanding(false);
+    tabs->setDrawBase(false);
+    tabs->setUsesScrollButtons(true);
+    tabs->setElideMode(Qt::ElideRight);
+    tabs->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    tabLayout->addWidget(tabs);
+    auto *newButton = new QToolButton(tabStrip);
+    newButton->setProperty("neoIcon", "plus");
+    newButton->setIcon(neoIcon("plus", palette().color(QPalette::Text)));
+    newButton->setIconSize(QSize(18, 18));
+    newButton->setFixedSize(32, 32);
+    newButton->setToolTip(tr("Новая вкладка · Ctrl+T"));
+    newButton->setAccessibleName(tr("Новая вкладка"));
+    newButton->setObjectName("newTabButton");
+    tabLayout->addWidget(newButton);
+    tabLayout->addStretch();
+    connect(newButton, &QToolButton::clicked, this, [this] { newTab(); });
+    layout->addWidget(tabStrip);
+    layout->addWidget(toolbar);
     progress = new QProgressBar(central);
     progress->setTextVisible(false);
     progress->setFixedHeight(2);
     progress->hide();
     layout->addWidget(progress);
-    tabs = new QTabWidget(central);
-    tabs->setObjectName("browserTabs");
-    tabs->setTabsClosable(false);
-    tabs->setMovable(true);
-    tabs->tabBar()->setExpanding(false);
-    auto *newButton = new QToolButton(tabs);
-    newButton->setProperty("neoIcon", "plus");
-    newButton->setIcon(neoIcon("plus", palette().color(QPalette::Text)));
-    newButton->setToolTip(tr("Новая вкладка · Ctrl+T"));
-    newButton->setAccessibleName(tr("Новая вкладка"));
-    newButton->setObjectName("newTabButton");
-    tabs->setCornerWidget(newButton, Qt::TopRightCorner);
-    connect(newButton, &QToolButton::clicked, this, [this] { newTab(); });
-    connect(tabs, &QTabWidget::currentChanged, this, [this] { updateChrome(); });
-    layout->addWidget(tabs);
+    pages = new QStackedWidget(central);
+    pages->setObjectName("browserPages");
+    connect(tabs, &QTabBar::currentChanged, this, [this](int index) {
+        pages->setCurrentIndex(index);
+        updateChrome();
+    });
+    connect(tabs, &QTabBar::tabMoved, this, [this](int from, int to) {
+        const QSignalBlocker blocker(pages);
+        auto *page = pages->widget(from);
+        pages->removeWidget(page);
+        pages->insertWidget(to, page);
+        pages->setCurrentIndex(tabs->currentIndex());
+        updateChrome();
+    });
+    layout->addWidget(pages, 1);
     setCentralWidget(central);
     statusBar()->setSizeGripEnabled(false);
 
@@ -162,11 +207,13 @@ BrowserWindow::BrowserWindow(QWidget *parent) : QMainWindow(parent), weather(thi
     connect(&weather, &WeatherService::loading, this, [this] {
         for (auto *home : findChildren<HomePage *>()) home->showWeatherLoading();
     });
+    restoreGeometry(settings.value("window/geometry").toByteArray());
+    this->layout()->activate();
+    layout->activate();
     const auto urls = settings.value("session/urls", QStringList{QString()}).toStringList();
     for (const auto &url : urls) newTab(false, QUrl(url));
     if (tabs->count() == 0) newTab();
     tabs->setCurrentIndex(qBound(0, settings.value("session/active", 0).toInt(), tabs->count() - 1));
-    restoreGeometry(settings.value("window/geometry").toByteArray());
     weather.setEnabled(settings.value("weather/enabled", true).toBool());
 }
 
@@ -241,12 +288,12 @@ void BrowserWindow::applyTheme()
 #endif
 }
 
-QStackedWidget *BrowserWindow::activeStack() const { return qobject_cast<QStackedWidget *>(tabs->currentWidget()); }
+QStackedWidget *BrowserWindow::activeStack() const { return qobject_cast<QStackedWidget *>(pages->currentWidget()); }
 QWebEngineView *BrowserWindow::activeView() const { return activeStack() ? activeStack()->findChild<QWebEngineView *>() : nullptr; }
 
 QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
 {
-    auto *stack = new QStackedWidget(tabs);
+    auto *stack = new QStackedWidget(pages);
     stack->setProperty("incognito", incognito);
     stack->setProperty("sessionUrl", url.toString());
     auto *home = new HomePage(incognito, stack);
@@ -259,8 +306,9 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     page->setBackgroundColor(palette().color(QPalette::Window));
     view->setPage(page);
     stack->addWidget(view);
-    const int index = tabs->addTab(stack, incognito ? tr("Инкогнито") : tr("Новая вкладка"));
-    auto *close = new QToolButton(tabs->tabBar());
+    const int index = pages->addWidget(stack);
+    tabs->addTab(incognito ? tr("Инкогнито") : tr("Новая вкладка"));
+    auto *close = new QToolButton(tabs);
     close->setObjectName("tabCloseButton");
     close->setProperty("neoIcon", "close");
     close->setIcon(neoIcon("close", palette().color(QPalette::Text)));
@@ -268,22 +316,22 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
     close->setFixedSize(24, 24);
     close->setToolTip(tr("Закрыть вкладку"));
     close->setAccessibleName(tr("Закрыть вкладку"));
-    tabs->tabBar()->setTabButton(index, QTabBar::RightSide, close);
-    connect(close, &QToolButton::clicked, this, [this, stack] { closeTab(tabs->indexOf(stack)); });
+    tabs->setTabButton(index, QTabBar::RightSide, close);
+    connect(close, &QToolButton::clicked, this, [this, stack] { closeTab(pages->indexOf(stack)); });
     connect(stack, &QObject::destroyed, close, &QObject::deleteLater);
     connect(home, &HomePage::submitted, this, [this, stack](const QString &text) {
-        tabs->setCurrentWidget(stack);
+        tabs->setCurrentIndex(pages->indexOf(stack));
         navigate(text);
     });
     connect(home, &HomePage::refreshWeather, &weather, &WeatherService::refresh);
     connect(view, &QWebEngineView::urlChanged, this, [this, stack](const QUrl &target) {
         stack->setProperty("sessionUrl", target.toString());
-        tabs->setTabToolTip(tabs->indexOf(stack), target.toDisplayString());
+        tabs->setTabToolTip(pages->indexOf(stack), target.toDisplayString());
         if (stack == activeStack()) updateChrome();
     });
     connect(view, &QWebEngineView::titleChanged, this, [this, stack, incognito](const QString &title) {
         if (stack->currentIndex() == 1) {
-            tabs->setTabText(tabs->indexOf(stack), (incognito ? QString::fromUtf8("◌ ") : QString()) + title.left(32));
+            tabs->setTabText(pages->indexOf(stack), (incognito ? QString::fromUtf8("◌ ") : QString()) + title.left(32));
         }
         if (stack == activeStack()) updateChrome();
     });
@@ -317,6 +365,7 @@ QWebEngineView *BrowserWindow::newTab(bool incognito, const QUrl &url)
                 .arg(permission.origin().host(), feature), QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes) permission.grant();
         else permission.deny();
     });
+    tabs->parentWidget()->layout()->activate();
     tabs->setCurrentIndex(index);
     if (url.isValid() && !url.isEmpty() && (url.scheme() == "http" || url.scheme() == "https")) {
         stack->setCurrentIndex(1);
@@ -348,13 +397,19 @@ void BrowserWindow::navigateHome()
 
 void BrowserWindow::closeTab(int index)
 {
-    auto *widget = tabs->widget(index);
+    auto *widget = pages->widget(index);
     const bool wasPrivate = widget->property("incognito").toBool();
-    tabs->removeTab(index);
+    {
+        const QSignalBlocker tabSignals(tabs);
+        const QSignalBlocker pageSignals(pages);
+        tabs->removeTab(index);
+        pages->removeWidget(widget);
+        pages->setCurrentIndex(tabs->currentIndex());
+    }
     delete widget;
     if (wasPrivate) {
         bool hasPrivateTabs = false;
-        for (int i = 0; i < tabs->count(); ++i) hasPrivateTabs |= tabs->widget(i)->property("incognito").toBool();
+        for (int i = 0; i < tabs->count(); ++i) hasPrivateTabs |= pages->widget(i)->property("incognito").toBool();
         if (!hasPrivateTabs) {
             delete privateProfile;
             privateProfile = new QWebEngineProfile(this);
@@ -532,7 +587,7 @@ void BrowserWindow::saveSession()
     QStringList urls;
     int active = 0;
     for (int i = 0; i < tabs->count(); ++i) {
-        auto *stack = qobject_cast<QStackedWidget *>(tabs->widget(i));
+        auto *stack = qobject_cast<QStackedWidget *>(pages->widget(i));
         if (stack->property("incognito").toBool()) continue;
         if (i == tabs->currentIndex()) active = urls.size();
         urls.append(stack->currentIndex() == 0 ? QString() : stack->property("sessionUrl").toString());

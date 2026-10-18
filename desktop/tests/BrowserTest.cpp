@@ -16,7 +16,6 @@
 #include <QSignalSpy>
 #include <QStackedWidget>
 #include <QStandardPaths>
-#include <QTabWidget>
 #include <QTabBar>
 #include <QTimer>
 #include <QTest>
@@ -72,7 +71,8 @@ private slots:
         BrowserWindow window;
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
-        auto *tabs = window.findChild<QTabWidget *>("browserTabs");
+        auto *tabs = window.findChild<QTabBar *>("browserTabs");
+        auto *pages = window.findChild<QStackedWidget *>("browserPages");
         QCOMPARE(tabs->count(), 1);
         auto *home = window.findChild<HomePage *>();
         auto *search = home->findChild<QLineEdit *>("homeSearch");
@@ -103,10 +103,10 @@ private slots:
         QCOMPARE(tabs->count(), 2);
         QTest::keyClick(&window, Qt::Key_N, Qt::ControlModifier | Qt::ShiftModifier);
         QCOMPARE(tabs->count(), 3);
-        auto *privateView = tabs->currentWidget()->findChild<QWebEngineView *>();
+        auto *privateView = pages->currentWidget()->findChild<QWebEngineView *>();
         QVERIFY(privateView->page()->profile()->isOffTheRecord());
         QSignalSpy privateProfileDestroyed(privateView->page()->profile(), &QObject::destroyed);
-        auto *close = qobject_cast<QToolButton *>(tabs->tabBar()->tabButton(tabs->currentIndex(), QTabBar::RightSide));
+        auto *close = qobject_cast<QToolButton *>(tabs->tabButton(tabs->currentIndex(), QTabBar::RightSide));
         QVERIFY(close && !close->icon().isNull());
         QTest::mouseClick(close, Qt::LeftButton);
         QCOMPARE(privateProfileDestroyed.count(), 1);
@@ -116,8 +116,8 @@ private slots:
         QVERIFY(address->hasFocus());
         QTest::keyClicks(address, "https://example.com");
         QTest::keyClick(address, Qt::Key_Return);
-        QCOMPARE(qobject_cast<QStackedWidget *>(tabs->currentWidget())->currentIndex(), 1);
-        auto *view = tabs->currentWidget()->findChild<QWebEngineView *>();
+        QCOMPARE(qobject_cast<QStackedWidget *>(pages->currentWidget())->currentIndex(), 1);
+        auto *view = pages->currentWidget()->findChild<QWebEngineView *>();
         QSignalSpy loaded(view, &QWebEngineView::loadFinished);
         view->setHtml("<html><title>NeoSerf test</title><body><h1>Working browser</h1></body></html>", QUrl("https://example.com"));
         QVERIFY(loaded.wait(15000));
@@ -125,7 +125,7 @@ private slots:
         QTest::keyClick(&window, Qt::Key_D, Qt::ControlModifier);
         QCOMPARE(QSettings().value("bookmarks").toList().size(), 1);
         QTest::mouseClick(window.findChild<QToolButton *>("homeButton"), Qt::LeftButton);
-        QCOMPARE(qobject_cast<QStackedWidget *>(tabs->currentWidget())->currentIndex(), 0);
+        QCOMPARE(qobject_cast<QStackedWidget *>(pages->currentWidget())->currentIndex(), 0);
         window.close();
     }
 
@@ -142,11 +142,73 @@ private slots:
         QVERIFY(!urls.contains("https://private.example/secret"));
     }
 
+    void tabStripStaysAboveAddressAndPlusFollowsTabs()
+    {
+        QSettings().remove("session/urls");
+        BrowserWindow window;
+        window.resize(1000, 720);
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        auto *tabs = window.findChild<QTabBar *>("browserTabs");
+        auto *pages = window.findChild<QStackedWidget *>("browserPages");
+        auto *plus = window.findChild<QToolButton *>("newTabButton");
+        auto *address = window.findChild<QLineEdit *>("addressBar");
+        auto checkPlacement = [&] {
+            const int tabBottom = tabs->mapTo(&window, tabs->rect().bottomLeft()).y();
+            QVERIFY(tabBottom < address->mapTo(&window, QPoint()).y());
+            const int nextTo = tabs->mapTo(&window, tabs->tabRect(tabs->count() - 1).topRight()).x();
+            const int plusX = plus->mapTo(&window, QPoint()).x();
+            QVERIFY2(plusX >= nextTo && plusX - nextTo <= 12,
+                qPrintable(QString("plus=%1 last=%2 barWidth=%3 count=%4").arg(plusX).arg(nextTo).arg(tabs->width()).arg(tabs->count())));
+            QVERIFY(window.rect().contains(plus->mapTo(&window, plus->rect().bottomRight())));
+            QVERIFY(tabs->tabRect(0).width() <= 190);
+        };
+        QTest::qWait(50);
+        checkPlacement();
+        QTest::mouseClick(plus, Qt::LeftButton);
+        QTest::qWait(50);
+        QCOMPARE(tabs->count(), 2);
+        checkPlacement();
+        auto *selected = pages->currentWidget();
+        auto *other = pages->widget(0);
+        selected->setProperty("sessionUrl", "https://second.example");
+        other->setProperty("sessionUrl", "https://first.example");
+        tabs->moveTab(1, 0);
+        QCOMPARE(pages->widget(0), selected);
+        QCOMPARE(pages->widget(1), other);
+        QCOMPARE(pages->currentWidget(), selected);
+        QTest::mouseClick(tabs, Qt::LeftButton, Qt::NoModifier, tabs->tabRect(1).center());
+        QCOMPARE(pages->currentWidget(), other);
+        auto *close = qobject_cast<QToolButton *>(tabs->tabButton(1, QTabBar::RightSide));
+        QTest::mouseClick(close, Qt::LeftButton);
+        QCOMPARE(tabs->count(), 1);
+        QCOMPARE(pages->currentWidget(), selected);
+        QTest::qWait(50);
+        checkPlacement();
+        for (int i = 0; i < 12; ++i) window.newTab();
+        window.resize(640, 520);
+        QTest::qWait(50);
+        int readableTabs = 0;
+        for (int i = 0; i < tabs->count(); ++i) {
+            if (tabs->tabRect(i).intersected(tabs->rect()).width() >= 80) ++readableTabs;
+        }
+        QVERIFY(readableTabs >= 3);
+        QVERIFY(plus->isVisible());
+        QVERIFY(window.rect().contains(plus->mapTo(&window, plus->rect().bottomRight())));
+        QVERIFY(plus->mapTo(&window, QPoint()).x() >= tabs->mapTo(&window, tabs->rect().topRight()).x());
+        const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
+        if (!artifacts.isEmpty()) QVERIFY(window.grab().save(artifacts + "/desktop-many-tabs.png"));
+        window.close();
+    }
+
     void themeSettingsPersistAndKeepControlsReadable()
     {
         BrowserWindow window;
+        window.resize(1180, 800);
         window.show();
         QVERIFY(QTest::qWaitForWindowExposed(&window));
+        window.activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(&window));
         for (const auto &mode : {QString("light"), QString("dark")}) {
             QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);
             auto *menu = window.findChild<QMenu *>("overflowMenu");
@@ -183,6 +245,8 @@ private slots:
             QVERIFY(search->text().isEmpty() && !clear->isVisible());
             const auto artifacts = qEnvironmentVariable("NEOSERF_TEST_ARTIFACTS");
             if (!artifacts.isEmpty()) {
+                window.activateWindow();
+                QVERIFY(QTest::qWaitForWindowActive(&window));
                 QTest::qWait(50);
                 QVERIFY(window.grab().save(artifacts + "/desktop-home-" + mode + ".png"));
                 QTest::mouseClick(window.findChild<QToolButton *>("menuButton"), Qt::LeftButton);

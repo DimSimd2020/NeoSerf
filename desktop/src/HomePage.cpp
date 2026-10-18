@@ -22,7 +22,8 @@ HomePage::HomePage(bool incognito, QWidget *parent) : QWidget(parent)
     content->setContentsMargins(0, 0, 0, 0);
     content->setSpacing(0);
     auto *logo = new QLabel(center);
-    QPixmap pixmap(128, 128);
+    logo->setObjectName("homeLogo");
+    QPixmap pixmap(224, 224);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     QSvgRenderer renderer(QStringLiteral(":/assets/logo.svg"));

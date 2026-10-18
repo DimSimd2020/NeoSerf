@@ -61,7 +61,7 @@ fun StartPageContent(
           painter = painterResource(R.drawable.neoserf_mark),
           contentDescription = null,
           tint = Color.Unspecified,
-          modifier = Modifier.size(64.dp)
+          modifier = Modifier.size(96.dp)
         )
         Spacer(Modifier.height(14.dp))
         Text(

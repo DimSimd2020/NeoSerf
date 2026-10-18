@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(NeoSerf VERSION 1.2.0 LANGUAGES CXX)
+project(NeoSerf VERSION 1.2.1 LANGUAGES CXX)
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
