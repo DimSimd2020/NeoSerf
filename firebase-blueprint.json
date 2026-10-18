@@ -1,0 +1,170 @@
+{
+  "entities": {
+    "BookmarkItem": {
+      "title": "BookmarkItem",
+      "description": "Synchronized user bookmark entry with folder categorization.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title of the bookmarked page."
+        },
+        "url": {
+          "type": "string",
+          "description": "Full URL of the bookmarked page."
+        },
+        "folder": {
+          "type": "string",
+          "description": "Folder or tag name for organizing bookmarks."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "title", "url", "folder", "createdAt", "updatedAt"]
+    },
+    "PasswordEntry": {
+      "title": "PasswordEntry",
+      "description": "Encrypted user credential stored in the NeoSerf password vault.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "siteDomain": {
+          "type": "string",
+          "description": "Domain or URL associated with the saved login."
+        },
+        "siteTitle": {
+          "type": "string",
+          "description": "Human-readable website title."
+        },
+        "username": {
+          "type": "string",
+          "description": "Login username or email."
+        },
+        "encryptedPassword": {
+          "type": "string",
+          "description": "AES-GCM encrypted ciphertext of the password."
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional note for the credential entry."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "siteDomain", "siteTitle", "username", "encryptedPassword", "notes", "createdAt", "updatedAt"]
+    },
+    "HistoryEntry": {
+      "title": "HistoryEntry",
+      "description": "Synchronized browsing history item.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Page title or search query."
+        },
+        "url": {
+          "type": "string",
+          "description": "Visited URL."
+        },
+        "searchEngine": {
+          "type": "string",
+          "description": "Active search engine identifier at the time of visit."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of visit (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "title", "url", "searchEngine", "createdAt", "updatedAt"]
+    },
+    "SpeedDialTile": {
+      "title": "SpeedDialTile",
+      "description": "Customizable start page quick-access tile.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short label for the speed dial tile."
+        },
+        "url": {
+          "type": "string",
+          "description": "Target URL when tapped."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category label for the quick access link."
+        },
+        "position": {
+          "type": "integer",
+          "description": "Display order index on the start page."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last update (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "title", "url", "category", "position", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/bookmarks/{bookmarkId}": {
+      "schema": { "$ref": "#/entities/BookmarkItem" },
+      "description": "Per-user synchronized bookmarks collection."
+    },
+    "/users/{userId}/passwords/{passwordId}": {
+      "schema": { "$ref": "#/entities/PasswordEntry" },
+      "description": "Per-user encrypted password vault entries."
+    },
+    "/users/{userId}/history/{historyId}": {
+      "schema": { "$ref": "#/entities/HistoryEntry" },
+      "description": "Per-user synchronized browsing history."
+    },
+    "/users/{userId}/speed_dial/{tileId}": {
+      "schema": { "$ref": "#/entities/SpeedDialTile" },
+      "description": "Per-user start page quick-access tiles."
+    }
+  }
+}

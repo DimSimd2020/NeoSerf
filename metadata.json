@@ -1,0 +1,6 @@
+{
+  "name": "NeoSerf",
+  "description": "Быстрый и приватный Android-браузер в темно-серой неоново-синей эстетике с облачной синхронизацией закладок и паролей, блокировщиком рекламы, режимом чтения и ПК.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

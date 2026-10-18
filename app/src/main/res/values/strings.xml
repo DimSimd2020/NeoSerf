@@ -1,0 +1,131 @@
+<resources>
+    <string name="app_name">NeoSerf</string>
+    <string name="app_tagline">Быстрый приватный браузер с облачной синхронизацией</string>
+
+    <!-- Auth Screen -->
+    <string name="auth_welcome_title">Добро пожаловать в NeoSerf</string>
+    <string name="auth_welcome_subtitle">Войдите через аккаунт Google, чтобы синхронизировать закладки, быстрый доступ, историю и зашифрованный менеджер паролей между вашими устройствами.</string>
+    <string name="auth_feature_adblock">Встроенный блокировщик рекламы и трекеров со статистикой</string>
+    <string name="auth_feature_modes">Режим чтения статей, режим ПК и приватные вкладки Инкогнито</string>
+    <string name="auth_feature_vault">Защищенный сейф паролей с AES-256 шифрованием и автозаполнением</string>
+    <string name="auth_sign_in_google">Войти через Google</string>
+    <string name="auth_signing_in">Выполняется вход...</string>
+    <string name="auth_error_missing_config">Не найден конфигурационный ключ Google Sign-In</string>
+    <string name="auth_error_generic">Не удалось выполнить вход</string>
+    <string name="auth_sign_out">Выйти из аккаунта</string>
+
+    <!-- Omnibox & Top Bar -->
+    <string name="omnibox_hint">Введите адрес сайта или поисковый запрос</string>
+    <string name="omnibox_incognito_hint">Приватный поиск или адрес сайта</string>
+    <string name="cd_search_engine_selector">Выбор поисковой системы</string>
+    <string name="cd_reader_mode">Режим чтения</string>
+    <string name="cd_desktop_mode">Режим ПК</string>
+    <string name="cd_reload_page">Обновить страницу</string>
+    <string name="cd_clear_input">Очистить ввод</string>
+    <string name="cd_bookmark_toggle">Добавить или удалить закладку</string>
+    <string name="cd_shield_stats">Щит блокировщика рекламы</string>
+
+    <!-- Bottom Navigation -->
+    <string name="nav_back">Назад</string>
+    <string name="nav_forward">Вперед</string>
+    <string name="nav_home">Старт</string>
+    <string name="nav_tabs">Вкладки</string>
+    <string name="nav_shield">Защита</string>
+    <string name="nav_menu">Меню</string>
+
+    <!-- Start Page & Weather Widget -->
+    <string name="start_greeting">Стартовая панель NeoSerf</string>
+    <string name="start_incognito_banner">Активен режим Инкогнито. История посещений, файлы cookie и поисковые запросы не сохраняются.</string>
+    <string name="weather_title">Погода в реальном времени</string>
+    <string name="weather_change_city">Сменить город</string>
+    <string name="weather_refresh">Обновить погоду</string>
+    <string name="weather_loading">Загрузка метеоданных...</string>
+    <string name="weather_wind_humidity">Ветер: %1$s км/ч  |  Влажность: %2$d%%</string>
+    <string name="weather_feels_like">Ощущается как %1$s°C</string>
+    <string name="weather_city_dialog_title">Настройка города погоды</string>
+    <string name="weather_city_input_label">Название города (например: Москва, Санкт-Петербург, London)</string>
+
+    <!-- Speed Dial -->
+    <string name="speed_dial_title">Быстрый доступ</string>
+    <string name="speed_dial_add">Добавить сайт</string>
+    <string name="speed_dial_empty">Добавьте любимые сайты на стартовую страницу для мгновенного перехода.</string>
+    <string name="speed_dial_dialog_title">Новая карточка быстрого доступа</string>
+    <string name="speed_dial_name_label">Название сайта</string>
+    <string name="speed_dial_url_label">Адрес (URL)</string>
+    <string name="speed_dial_category_label">Категория</string>
+
+    <!-- Start Page Customization -->
+    <string name="customize_start_page">Настроить стартовую страницу</string>
+    <string name="customize_show_weather">Показывать виджет погоды</string>
+    <string name="customize_show_speed_dial">Показывать сетку быстрого доступа</string>
+    <string name="customize_show_shield_summary">Показывать сводку блокировщика рекламы</string>
+    <string name="customize_default_engine">Поисковая система по умолчанию</string>
+
+    <!-- Reader Mode -->
+    <string name="reader_mode_title">Режим чтения</string>
+    <string name="reader_mode_exit">Закрыть чтение</string>
+    <string name="reader_font_size">Размер текста</string>
+    <string name="reader_theme_graphite">Графит</string>
+    <string name="reader_theme_amoled">Черный</string>
+    <string name="reader_theme_sepia">Сепия</string>
+    <string name="reader_extracting">Извлечение текста статьи...</string>
+    <string name="reader_empty_fallback">На текущей странице не обнаружено длинной статьи. Откройте любую новость, документацию или статью для чтения без лишних элементов.</string>
+
+    <!-- AdBlocker Shield -->
+    <string name="adblock_title">Щит приватности NeoSerf</string>
+    <string name="adblock_enabled">Блокировка рекламы и трекеров</string>
+    <string name="adblock_ads_blocked">Рекламных запросов заблокировано</string>
+    <string name="adblock_trackers_blocked">Аналитических трекеров остановлено</string>
+    <string name="adblock_data_saved">Сэкономлено трафика</string>
+    <string name="adblock_whitelist_domain">Разрешить рекламу на текущем домене</string>
+    <string name="adblock_whitelist_section">Белый список доменов</string>
+    <string name="adblock_reset_stats">Сбросить статистику</string>
+
+    <!-- Tabs & Incognito -->
+    <string name="tabs_title">Открытые вкладки</string>
+    <string name="tabs_regular">Обычные</string>
+    <string name="tabs_incognito">Инкогнито</string>
+    <string name="tabs_new_regular">Новая вкладка</string>
+    <string name="tabs_new_incognito">Новая вкладка Инкогнито</string>
+    <string name="tabs_close_incognito">Закрыть все вкладки Инкогнито</string>
+
+    <!-- Bookmarks, History & Password Vault -->
+    <string name="menu_bookmarks">Закладки (Облако)</string>
+    <string name="menu_passwords">Менеджер паролей</string>
+    <string name="menu_history">История просмотров</string>
+    <string name="menu_desktop_mode">Режим ПК (Полная версия сайта)</string>
+    <string name="menu_reader_mode">Режим чтения страницы</string>
+    <string name="menu_start_settings">Настройка стартовой страницы</string>
+    <string name="menu_autofill_password">Автозаполнение пароля на сайте</string>
+
+    <string name="bookmarks_title">Синхронизированные закладки</string>
+    <string name="bookmarks_add_current">Добавить текущую страницу</string>
+    <string name="bookmarks_empty">Список закладок пуст. Сохраняйте важные страницы, чтобы они были доступны на всех устройствах.</string>
+    <string name="bookmarks_folder_label">Папка</string>
+
+    <string name="history_title">История браузера</string>
+    <string name="history_clear_all">Очистить историю</string>
+    <string name="history_search_hint">Поиск по истории...</string>
+    <string name="history_empty">История посещений пуста.</string>
+
+    <string name="passwords_title">Защищенный менеджер паролей</string>
+    <string name="passwords_subtitle">Пароли шифруются алгоритмом AES-GCM перед синхронизацией в облаке Google</string>
+    <string name="passwords_add">Добавить пароль</string>
+    <string name="passwords_generate">Сгенерировать надежный пароль</string>
+    <string name="passwords_site_domain">Домен сайта (например, github.com)</string>
+    <string name="passwords_site_title">Название сервиса</string>
+    <string name="passwords_username">Логин или Email</string>
+    <string name="passwords_password">Пароль</string>
+    <string name="passwords_notes">Заметка (необязательно)</string>
+    <string name="passwords_autofill_action">Заполнить на странице</string>
+    <string name="passwords_copy_action">Скопировать пароль</string>
+    <string name="passwords_show_hide">Показать или скрыть пароль</string>
+    <string name="passwords_empty">В сейфе пока нет сохраненных паролей.</string>
+
+    <!-- Common Actions -->
+    <string name="action_save">Сохранить</string>
+    <string name="action_cancel">Отмена</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_open">Открыть</string>
+</resources>

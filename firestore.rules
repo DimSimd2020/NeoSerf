@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidBookmarkItem(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.url is string && data.url.size() >= 1 && data.url.size() <= 2048 &&
+             data.folder is string && data.folder.size() >= 1 && data.folder.size() <= 80 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidPasswordEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.siteDomain is string && data.siteDomain.size() >= 1 && data.siteDomain.size() <= 255 &&
+             data.siteTitle is string && data.siteTitle.size() >= 1 && data.siteTitle.size() <= 200 &&
+             data.username is string && data.username.size() >= 1 && data.username.size() <= 200 &&
+             data.encryptedPassword is string && data.encryptedPassword.size() >= 1 && data.encryptedPassword.size() <= 1024 &&
+             data.notes is string && data.notes.size() <= 500 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidHistoryEntry(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 300 &&
+             data.url is string && data.url.size() >= 1 && data.url.size() <= 2048 &&
+             data.searchEngine is string && data.searchEngine.size() >= 1 && data.searchEngine.size() <= 50 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSpeedDialTile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 100 &&
+             data.url is string && data.url.size() >= 1 && data.url.size() <= 2048 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+             data.position is int && data.position >= 0 && data.position <= 100 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(bookmarkId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(bookmarkId) &&
+                       incoming().keys().hasAll(['userId', 'title', 'url', 'folder', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'title', 'url', 'folder', 'createdAt', 'updatedAt']) &&
+                       isValidBookmarkItem(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(bookmarkId) &&
+                       isValidBookmarkItem(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'url', 'folder', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(bookmarkId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/passwords/{passwordId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(passwordId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(passwordId) &&
+                       incoming().keys().hasAll(['userId', 'siteDomain', 'siteTitle', 'username', 'encryptedPassword', 'notes', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'siteDomain', 'siteTitle', 'username', 'encryptedPassword', 'notes', 'createdAt', 'updatedAt']) &&
+                       isValidPasswordEntry(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(passwordId) &&
+                       isValidPasswordEntry(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['siteDomain', 'siteTitle', 'username', 'encryptedPassword', 'notes', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(passwordId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/history/{historyId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(historyId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(historyId) &&
+                       incoming().keys().hasAll(['userId', 'title', 'url', 'searchEngine', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'title', 'url', 'searchEngine', 'createdAt', 'updatedAt']) &&
+                       isValidHistoryEntry(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(historyId) &&
+                       isValidHistoryEntry(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'url', 'searchEngine', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(historyId) && existing().userId == request.auth.uid;
+    }
+
+    match /users/{userId}/speed_dial/{tileId} {
+      allow get: if isOwner(userId) && isValidId(userId) && isValidId(tileId) && existing().userId == request.auth.uid;
+      allow list: if isOwner(userId) && existing().userId == request.auth.uid;
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(tileId) &&
+                       incoming().keys().hasAll(['userId', 'title', 'url', 'category', 'position', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'title', 'url', 'category', 'position', 'createdAt', 'updatedAt']) &&
+                       isValidSpeedDialTile(incoming());
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidId(tileId) &&
+                       isValidSpeedDialTile(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['title', 'url', 'category', 'position', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId) && isValidId(tileId) && existing().userId == request.auth.uid;
+    }
+  }
+}
