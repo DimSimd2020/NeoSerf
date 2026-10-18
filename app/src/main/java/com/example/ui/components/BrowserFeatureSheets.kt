@@ -97,33 +97,49 @@ fun TabsModalSheet(
         .fillMaxWidth()
         .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-      Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
+      Column(modifier = Modifier.fillMaxWidth()) {
         Text(
           text = stringResource(R.string.tabs_title),
           style = MaterialTheme.typography.titleLarge,
-          color = MaterialTheme.colorScheme.onSurface
+          color = MaterialTheme.colorScheme.onSurface,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.fillMaxWidth()
         )
-
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
           FilterChip(
             selected = !showIncognitoOnly,
             onClick = { showIncognitoOnly = false },
             label = {
-              Text("${stringResource(R.string.tabs_regular)} (${tabs.count { !it.isIncognito }})")
+              Text(
+                text = "${stringResource(R.string.tabs_regular)} (${tabs.count { !it.isIncognito }})",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false
+              )
             },
-            modifier = Modifier.testTag("tabs_filter_regular")
+            modifier = Modifier
+              .weight(1f)
+              .testTag("tabs_filter_regular")
           )
           FilterChip(
             selected = showIncognitoOnly,
             onClick = { showIncognitoOnly = true },
             label = {
-              Text("${stringResource(R.string.tabs_incognito)} (${tabs.count { it.isIncognito }})")
+              Text(
+                text = "${stringResource(R.string.tabs_incognito)} (${tabs.count { it.isIncognito }})",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false
+              )
             },
-            modifier = Modifier.testTag("tabs_filter_incognito")
+            modifier = Modifier
+              .weight(1f)
+              .testTag("tabs_filter_incognito")
           )
         }
       }

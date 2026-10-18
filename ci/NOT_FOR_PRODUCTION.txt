@@ -1,0 +1,3 @@
+ci/sideload-debug.keystore is a sideload-only signing key for GitHub Actions
+when KEYSTORE_* secrets are not set. Consecutive CI APKs share this signature
+so `adb install -r` can update. Do not use it for Play Console or production.

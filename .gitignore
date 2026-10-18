@@ -20,5 +20,7 @@ debug.keystore
 *.keystore
 *.apk
 !gradle/wrapper/gradle-wrapper.jar
+# Sideload-only CI keystore so unsigned-secret releases share a stable signature.
+!ci/sideload-debug.keystore
 
 *-debug.log
