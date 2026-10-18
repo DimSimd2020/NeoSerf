@@ -1,23 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <!-- Outer Cyber Shield Ring -->
-    <path
-        android:fillColor="#1F3898EC"
-        android:pathData="M54,24 L80,34 L80,54 C80,71.5 68.9,85.2 54,90 C39.1,85.2 28,71.5 28,54 L28,34 Z" />
-    <!-- Bold Neon Blue Shield Outline & Globe Compass -->
-    <path
-        android:fillColor="#3898EC"
-        android:pathData="M54,27 L76,35.5 L76,54 C76,69.1 66.6,81.1 54,85.5 C41.4,81.1 32,69.1 32,54 L32,35.5 L54,27 Z M54,32.4 L36.8,39 L36.8,54 C36.8,66.4 44.1,76.3 54,80.3 C63.9,76.3 71.2,66.4 71.2,54 L71.2,39 L54,32.4 Z" />
-    <!-- Stylized N Wave & Compass Needle -->
-    <path
-        android:fillColor="#E6EDF3"
-        android:pathData="M43,65 L43,43 L48.5,43 L59.5,57.5 L59.5,43 L65,43 L65,65 L59.5,65 L48.5,50.5 L48.5,65 Z" />
-    <!-- Top Accent Dot -->
-    <path
-        android:fillColor="#52B69A"
-        android:pathData="M54,36m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="512" android:viewportHeight="512">
+    <group android:pivotX="256" android:pivotY="256" android:scaleX="0.7" android:scaleY="0.7">
+        <path android:pathData="M135,375C135,240 175,140 235,115L285,265L200,375Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear"
+                    android:startX="97.45838" android:startY="180.07214"
+                    android:endX="322.54162" android:endY="309.92786">
+                    <item android:offset="0" android:color="#60A5FA" />
+                    <item android:offset="1" android:color="#1D4ED8" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:pathData="M377,115C377,250 337,350 277,375L227,225L312,115Z">
+            <aapt:attr name="android:fillColor">
+                <gradient android:type="linear"
+                    android:startX="189.45838" android:startY="309.92786"
+                    android:endX="414.54162" android:endY="180.07214">
+                    <item android:offset="0" android:color="#2563EB" />
+                    <item android:offset="1" android:color="#00F0FF" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path android:fillColor="#38BDF8"
+            android:pathData="M95,405Q256,445 417,385Q256,415 95,405Z" />
+    </group>
 </vector>

@@ -26,7 +26,10 @@ import org.robolectric.annotation.Config
 @Config(sdk = [29])
 class GuestModeWithoutFirebaseTest {
 
-  @get:Rule
+  @get:Rule(order = 0)
+  val onboardingDone = OnboardingDoneRule()
+
+  @get:Rule(order = 1)
   val composeRule = createAndroidComposeRule<MainActivity>()
 
   @Test

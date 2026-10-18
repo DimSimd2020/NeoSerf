@@ -26,11 +26,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 sealed interface UiState<out T> {
   data object Loading : UiState<Nothing>
@@ -131,16 +135,21 @@ class BrowserViewModel(
   private val _weatherState = MutableStateFlow<UiState<WeatherForecast>>(UiState.Loading)
   val weatherState: StateFlow<UiState<WeatherForecast>> = _weatherState.asStateFlow()
 
+  private var weatherJob: Job? = null
   private var defaultsSeeded = false
 
   init {
     viewModelScope.launch {
-      preferences
-        .map { it.weatherCity }
-        .distinctUntilChanged()
-        .collect { city ->
-          refreshWeather(city)
+      preferences.map { it.showWeatherWidget }.distinctUntilChanged().collectLatest { enabled ->
+        if (enabled) {
+          while (isActive) {
+            refreshWeather()
+            delay(30 * 60 * 1000L)
+          }
+        } else {
+          weatherJob?.cancel()
         }
+      }
     }
 
     viewModelScope.launch {
@@ -159,8 +168,7 @@ class BrowserViewModel(
       Triple("Хабр", "https://habr.com/ru/all/", "Технологии"),
       Triple("GitHub", "https://github.com", "Разработка"),
       Triple("Kotlin", "https://kotlinlang.org/docs/home.html", "Документация"),
-      Triple("Погода", "https://open-meteo.com", "Метеоданные"),
-      Triple("DuckDuckGo", "https://duckduckgo.com", "Поиск")
+      Triple("Погода", "https://open-meteo.com", "Метеоданные")
     )
     defaults.forEachIndexed { index, (title, url, category) ->
       syncRepository.addSpeedDialTile(title, url, category, index)
@@ -175,28 +183,14 @@ class BrowserViewModel(
     _statusMessage.value = msg
   }
 
-  fun refreshWeather(cityOverride: String? = null) {
-    val targetCity = cityOverride ?: preferences.value.weatherCity
+  fun refreshWeather() {
+    weatherJob?.cancel()
     _weatherState.value = UiState.Loading
-    viewModelScope.launch {
-      val result = weatherRepository.fetchWeatherForCity(targetCity)
-      result.fold(
-        onSuccess = { forecast ->
-          _weatherState.value = UiState.Success(forecast)
-        },
-        onFailure = { err ->
-          _weatherState.value = UiState.Error(err.localizedMessage ?: "Не удалось загрузить погоду")
-        }
+    weatherJob = viewModelScope.launch {
+      weatherRepository.fetchWeather().fold(
+        onSuccess = { _weatherState.value = UiState.Success(it) },
+        onFailure = { _weatherState.value = UiState.Error("Погода недоступна. Проверьте подключение к сети.") }
       )
-    }
-  }
-
-  fun updateWeatherCity(newCity: String) {
-    val trimmed = newCity.trim()
-    if (trimmed.isNotEmpty()) {
-      viewModelScope.launch {
-        prefsRepository.setWeatherCity(trimmed)
-      }
     }
   }
 
@@ -483,8 +477,8 @@ class BrowserViewModel(
     viewModelScope.launch { prefsRepository.setShowSpeedDial(show) }
   }
 
-  fun setShowShieldSummary(show: Boolean) {
-    viewModelScope.launch { prefsRepository.setShowShieldSummary(show) }
+  fun setAppTheme(theme: com.example.data.model.AppTheme) {
+    viewModelScope.launch { prefsRepository.setAppTheme(theme) }
   }
 
   // --- CLOUD BOOKMARKS, SPEED DIAL, HISTORY & PASSWORD VAULT ---

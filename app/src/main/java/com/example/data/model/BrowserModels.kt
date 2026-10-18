@@ -141,6 +141,8 @@ data class WeatherForecast(
   val windSpeedKmh: Double,
   val humidityPercent: Int,
   val weatherCode: Int,
+  val isDay: Boolean = true,
+  val locationSource: String = "По сети",
   val conditionText: String,
   val dailyMaxC: Double,
   val dailyMinC: Double,

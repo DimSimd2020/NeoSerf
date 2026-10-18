@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.data.model.ReaderTheme
+import com.example.data.model.AppTheme
 import com.example.data.model.SearchEngine
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,48 +16,48 @@ import kotlinx.coroutines.flow.map
 private val Context.browserDataStore by preferencesDataStore(name = "neoserf_preferences")
 
 data class BrowserPreferencesState(
+  val appTheme: AppTheme = AppTheme.SYSTEM,
   val searchEngine: SearchEngine = SearchEngine.GOOGLE,
-  val weatherCity: String = "Москва",
   val showWeatherWidget: Boolean = true,
-  val showSpeedDial: Boolean = true,
-  val showShieldSummary: Boolean = true,
+  val showSpeedDial: Boolean = false,
   val adBlockEnabled: Boolean = true,
   val totalAdsBlocked: Int = 0,
   val totalTrackersBlocked: Int = 0,
   val whitelistedDomains: Set<String> = emptySet(),
   val readerFontSizeSp: Int = 18,
   val readerTheme: ReaderTheme = ReaderTheme.GRAPHITE,
+  val onboardingCompleted: Boolean = false,
 )
 
 class BrowserPreferencesRepository(private val context: Context) {
 
   private object Keys {
+    val APP_THEME = stringPreferencesKey("app_theme")
     val SEARCH_ENGINE = stringPreferencesKey("search_engine")
-    val WEATHER_CITY = stringPreferencesKey("weather_city")
     val SHOW_WEATHER = booleanPreferencesKey("show_weather_widget")
     val SHOW_SPEED_DIAL = booleanPreferencesKey("show_speed_dial")
-    val SHOW_SHIELD_SUMMARY = booleanPreferencesKey("show_shield_summary")
     val ADBLOCK_ENABLED = booleanPreferencesKey("adblock_enabled")
     val TOTAL_ADS_BLOCKED = intPreferencesKey("total_ads_blocked")
     val TOTAL_TRACKERS_BLOCKED = intPreferencesKey("total_trackers_blocked")
     val WHITELISTED_DOMAINS = stringSetPreferencesKey("whitelisted_domains")
     val READER_FONT_SIZE = intPreferencesKey("reader_font_size_sp")
     val READER_THEME = stringPreferencesKey("reader_theme")
+    val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
   }
 
   val preferencesFlow: Flow<BrowserPreferencesState> = context.browserDataStore.data.map { prefs ->
     BrowserPreferencesState(
+      appTheme = AppTheme.entries.firstOrNull { it.name == prefs[Keys.APP_THEME] } ?: AppTheme.SYSTEM,
       searchEngine = SearchEngine.fromId(prefs[Keys.SEARCH_ENGINE] ?: SearchEngine.GOOGLE.id),
-      weatherCity = prefs[Keys.WEATHER_CITY] ?: "Москва",
       showWeatherWidget = prefs[Keys.SHOW_WEATHER] ?: true,
-      showSpeedDial = prefs[Keys.SHOW_SPEED_DIAL] ?: true,
-      showShieldSummary = prefs[Keys.SHOW_SHIELD_SUMMARY] ?: true,
+      showSpeedDial = prefs[Keys.SHOW_SPEED_DIAL] ?: false,
       adBlockEnabled = prefs[Keys.ADBLOCK_ENABLED] ?: true,
       totalAdsBlocked = prefs[Keys.TOTAL_ADS_BLOCKED] ?: 0,
       totalTrackersBlocked = prefs[Keys.TOTAL_TRACKERS_BLOCKED] ?: 0,
       whitelistedDomains = prefs[Keys.WHITELISTED_DOMAINS] ?: emptySet(),
       readerFontSizeSp = (prefs[Keys.READER_FONT_SIZE] ?: 18).coerceIn(14, 28),
-      readerTheme = ReaderTheme.fromId(prefs[Keys.READER_THEME] ?: ReaderTheme.GRAPHITE.id)
+      readerTheme = ReaderTheme.fromId(prefs[Keys.READER_THEME] ?: ReaderTheme.GRAPHITE.id),
+      onboardingCompleted = prefs[Keys.ONBOARDING_COMPLETED] ?: false
     )
   }
 
@@ -64,8 +65,8 @@ class BrowserPreferencesRepository(private val context: Context) {
     context.browserDataStore.edit { it[Keys.SEARCH_ENGINE] = engine.id }
   }
 
-  suspend fun setWeatherCity(city: String) {
-    context.browserDataStore.edit { it[Keys.WEATHER_CITY] = city.trim().ifEmpty { "Москва" } }
+  suspend fun setAppTheme(theme: AppTheme) {
+    context.browserDataStore.edit { it[Keys.APP_THEME] = theme.name }
   }
 
   suspend fun setShowWeatherWidget(show: Boolean) {
@@ -74,10 +75,6 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   suspend fun setShowSpeedDial(show: Boolean) {
     context.browserDataStore.edit { it[Keys.SHOW_SPEED_DIAL] = show }
-  }
-
-  suspend fun setShowShieldSummary(show: Boolean) {
-    context.browserDataStore.edit { it[Keys.SHOW_SHIELD_SUMMARY] = show }
   }
 
   suspend fun setAdBlockEnabled(enabled: Boolean) {
@@ -118,6 +115,10 @@ class BrowserPreferencesRepository(private val context: Context) {
 
   suspend fun setReaderFontSize(sizeSp: Int) {
     context.browserDataStore.edit { it[Keys.READER_FONT_SIZE] = sizeSp.coerceIn(14, 28) }
+  }
+
+  suspend fun setOnboardingCompleted() {
+    context.browserDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = true }
   }
 
   suspend fun setReaderTheme(theme: ReaderTheme) {

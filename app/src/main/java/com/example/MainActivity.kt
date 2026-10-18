@@ -4,21 +4,34 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.SideEffect
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.local.BrowserPreferencesRepository
+import com.example.data.local.BrowserPreferencesState
+import com.example.data.model.AppTheme
 import com.example.data.remote.FirebaseAvailability
 import com.example.data.remote.WeatherRepository
 import com.example.data.repository.FirestoreBrowserSyncRepository
 import com.example.data.repository.LocalBrowserSyncRepository
 import com.example.ui.BrowserScreen
+import com.example.ui.WelcomeScreen
 import com.example.ui.auth.AuthScreen
 import com.example.ui.theme.NeoSerfTheme
 import com.example.ui.viewmodel.BrowserViewModel
@@ -28,6 +41,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 
 internal fun FirebaseAuth.authStateFlow(): Flow<FirebaseUser?> = callbackFlow {
   val listener = FirebaseAuth.AuthStateListener { auth ->
@@ -41,9 +55,37 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
+    // Updating an existing install must not replay the first-launch screen.
+    val packageInfo = packageManager.getPackageInfo(packageName, 0)
+    val freshInstall = packageInfo.firstInstallTime == packageInfo.lastUpdateTime
     setContent {
-      NeoSerfTheme {
-        AppNavigation()
+      val prefsRepository = remember { BrowserPreferencesRepository(applicationContext) }
+      val scope = rememberCoroutineScope()
+      // Null until DataStore has been read, so the welcome screen never flashes for returning users.
+      val loaded by prefsRepository.preferencesFlow.collectAsStateWithLifecycle<BrowserPreferencesState?>(null)
+      val preferences = loaded
+      LaunchedEffect(preferences?.onboardingCompleted) {
+        if (preferences != null && !preferences.onboardingCompleted && !freshInstall) prefsRepository.setOnboardingCompleted()
+      }
+      NeoSerfTheme(preferences?.appTheme ?: AppTheme.SYSTEM) {
+        val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        SideEffect {
+          WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+          }
+        }
+        when {
+          preferences == null -> Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background))
+          !preferences.onboardingCompleted && freshInstall -> WelcomeScreen(
+            appTheme = preferences.appTheme,
+            searchEngine = preferences.searchEngine,
+            onThemeSelected = { scope.launch { prefsRepository.setAppTheme(it) } },
+            onSearchEngineSelected = { scope.launch { prefsRepository.setSearchEngine(it) } },
+            onFinish = { scope.launch { prefsRepository.setOnboardingCompleted() } }
+          )
+          else -> AppNavigation()
+        }
       }
     }
   }
@@ -73,7 +115,7 @@ private fun GuestBrowserScreen() {
         BrowserViewModel(
           syncRepository = LocalBrowserSyncRepository(),
           prefsRepository = BrowserPreferencesRepository(app),
-          weatherRepository = WeatherRepository(),
+          weatherRepository = WeatherRepository(app),
           currentUserId = FirebaseAvailability.LOCAL_GUEST_USER_ID
         )
       }
@@ -112,7 +154,7 @@ private fun AuthenticatedBrowserNavigation() {
           BrowserViewModel(
             syncRepository = FirestoreBrowserSyncRepository(firestore),
             prefsRepository = BrowserPreferencesRepository(app),
-            weatherRepository = WeatherRepository(),
+            weatherRepository = WeatherRepository(app),
             currentUserId = currentUserId
           )
         }

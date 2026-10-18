@@ -1,111 +1,136 @@
 package com.example.data.remote
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
+import android.os.SystemClock
+import androidx.core.content.ContextCompat
+import androidx.core.location.LocationManagerCompat
 import com.example.data.model.WeatherForecast
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.net.URLEncoder
+import java.util.Locale
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
 
-class WeatherRepository {
+class WeatherRepository(
+  private val context: Context? = null,
+  private val httpClient: OkHttpClient = OkHttpClient.Builder()
+    .connectTimeout(8, TimeUnit.SECONDS)
+    .readTimeout(8, TimeUnit.SECONDS)
+    .callTimeout(12, TimeUnit.SECONDS)
+    .build(),
+) {
+  private data class Region(val latitude: Double, val longitude: Double, val city: String, val country: String, val source: String)
 
-  private val httpClient = OkHttpClient.Builder()
-    .connectTimeout(10, TimeUnit.SECONDS)
-    .readTimeout(10, TimeUnit.SECONDS)
-    .build()
-
-  suspend fun fetchWeatherForCity(cityQuery: String): Result<WeatherForecast> = withContext(Dispatchers.IO) {
-    runCatching {
-      val cleanCity = cityQuery.trim().ifEmpty { "Москва" }
-      val encodedCity = URLEncoder.encode(cleanCity, "UTF-8")
-      val geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=$encodedCity&count=1&language=ru&format=json"
-
-      val geoReq = Request.Builder().url(geoUrl).get().build()
-      val geoBody = httpClient.newCall(geoReq).execute().use { response ->
-        if (!response.isSuccessful) error("Ошибка геокодинга: HTTP ${response.code}")
-        response.body?.string() ?: error("Пустой ответ геокодинга")
-      }
-
-      val geoJson = JSONObject(geoBody)
-      val results = geoJson.optJSONArray("results")
-      val (lat, lon, resolvedName, country) = if (results != null && results.length() > 0) {
-        val first = results.getJSONObject(0)
-        Quad(
-          first.optDouble("latitude", 55.7558),
-          first.optDouble("longitude", 37.6173),
-          first.optString("name", cleanCity),
-          first.optString("country", "Россия")
-        )
+  suspend fun fetchWeather(): Result<WeatherForecast> = withContext(Dispatchers.IO) {
+    try {
+      val location = deviceLocation()
+      val region = if (location != null) {
+        val address = try {
+          @Suppress("DEPRECATION")
+          context?.let { Geocoder(it, Locale("ru")).getFromLocation(location.latitude, location.longitude, 1)?.firstOrNull() }
+        } catch (_: java.io.IOException) { null }
+        Region(location.latitude, location.longitude,
+          address?.locality ?: address?.subAdminArea ?: "Рядом с вами", address?.countryName.orEmpty(), "По местоположению")
       } else {
-        Quad(55.7558, 37.6173, cleanCity, "Россия")
+        val geo = requestJson("https://ipwho.is/?lang=ru&fields=success,latitude,longitude,city,region,country")
+        check(geo.optBoolean("success")) { "Не удалось определить регион" }
+        Region(geo.getDouble("latitude"), geo.getDouble("longitude"),
+          geo.optString("city").ifBlank { geo.optString("region").ifBlank { "Ваш регион" } },
+          geo.optString("country"), "По сети")
       }
-
-      val forecastUrl =
-        "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon" +
-          "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m" +
+      require(region.latitude in -90.0..90.0 && region.longitude in -180.0..180.0)
+      val forecast = requestJson(
+        "https://api.open-meteo.com/v1/forecast?latitude=${region.latitude}&longitude=${region.longitude}" +
+          "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day" +
           "&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1"
-
-      val weatherReq = Request.Builder().url(forecastUrl).get().build()
-      val weatherBody = httpClient.newCall(weatherReq).execute().use { response ->
-        if (!response.isSuccessful) error("Ошибка прогноза погоды: HTTP ${response.code}")
-        response.body?.string() ?: error("Пустой ответ метеосервиса")
-      }
-
-      val weatherJson = JSONObject(weatherBody)
-      val current = weatherJson.optJSONObject("current") ?: JSONObject()
-      val daily = weatherJson.optJSONObject("daily") ?: JSONObject()
-
-      val temp = current.optDouble("temperature_2m", 18.0)
-      val apparent = current.optDouble("apparent_temperature", temp)
-      val humidity = current.optInt("relative_humidity_2m", 60)
-      val wind = current.optDouble("wind_speed_10m", 10.0)
-      val code = current.optInt("weather_code", 0)
-
-      val maxArr = daily.optJSONArray("temperature_2m_max")
-      val minArr = daily.optJSONArray("temperature_2m_min")
-      val maxTemp = if (maxArr != null && maxArr.length() > 0) maxArr.optDouble(0, temp + 2) else temp + 2
-      val minTemp = if (minArr != null && minArr.length() > 0) minArr.optDouble(0, temp - 3) else temp - 3
-
-      WeatherForecast(
-        cityName = resolvedName,
-        country = country,
-        temperatureC = temp,
-        apparentTempC = apparent,
-        windSpeedKmh = wind,
-        humidityPercent = humidity,
-        weatherCode = code,
-        conditionText = mapWeatherCodeToRussian(code),
-        dailyMaxC = maxTemp,
-        dailyMinC = minTemp
       )
+      Result.success(parseForecast(forecast, region.city, region.country, region.source))
+    } catch (cancelled: CancellationException) {
+      throw cancelled
+    } catch (error: Exception) {
+      Result.failure(error)
     }
   }
 
-  private data class Quad(
-    val lat: Double,
-    val lon: Double,
-    val name: String,
-    val country: String,
-  )
+  private suspend fun deviceLocation(): Location? {
+    val app = context ?: return null
+    if (ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
+    val manager = app.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+    return try {
+      val providers = manager.getProviders(true)
+      val cached = providers.mapNotNull { manager.getLastKnownLocation(it) }
+        .filter { SystemClock.elapsedRealtimeNanos() - it.elapsedRealtimeNanos in 0..TimeUnit.MINUTES.toNanos(30) }
+        .maxByOrNull { it.elapsedRealtimeNanos }
+      if (cached != null) return cached
+      val provider = providers.firstOrNull { it == LocationManager.NETWORK_PROVIDER } ?: return null
+      withTimeoutOrNull(5_000) {
+        suspendCancellableCoroutine { continuation ->
+          val cancellation = android.os.CancellationSignal()
+          continuation.invokeOnCancellation { cancellation.cancel() }
+          LocationManagerCompat.getCurrentLocation(manager, provider, cancellation, ContextCompat.getMainExecutor(app)) {
+            if (continuation.isActive) continuation.resume(it)
+          }
+        }
+      }
+    } catch (_: SecurityException) { null }
+      catch (_: IllegalArgumentException) { null }
+  }
+
+  private fun requestJson(url: String): JSONObject {
+    val request = Request.Builder().url(url).header("User-Agent", "NeoSerf/1.1").build()
+    return httpClient.newCall(request).execute().use { response ->
+      check(response.isSuccessful) { "Метеосервис недоступен: HTTP ${response.code}" }
+      JSONObject(response.body?.string() ?: error("Пустой ответ метеосервиса"))
+    }
+  }
 
   companion object {
+    internal fun parseForecast(json: JSONObject, city: String, country: String, source: String): WeatherForecast {
+      val current = json.getJSONObject("current")
+      val daily = json.getJSONObject("daily")
+      val code = current.getInt("weather_code")
+      val temperature = current.getDouble("temperature_2m")
+      val apparent = current.getDouble("apparent_temperature")
+      val wind = current.getDouble("wind_speed_10m")
+      val humidity = current.getInt("relative_humidity_2m")
+      val high = daily.getJSONArray("temperature_2m_max").getDouble(0)
+      val low = daily.getJSONArray("temperature_2m_min").getDouble(0)
+      require(listOf(temperature, apparent, wind, high, low).all { it.isFinite() } && humidity in 0..100)
+      return WeatherForecast(
+        cityName = city, country = country, temperatureC = temperature,
+        apparentTempC = apparent, windSpeedKmh = wind, humidityPercent = humidity,
+        weatherCode = code, conditionText = mapWeatherCodeToRussian(code),
+        dailyMaxC = high, dailyMinC = low, isDay = current.getInt("is_day") == 1,
+        locationSource = source
+      )
+    }
+
     fun mapWeatherCodeToRussian(code: Int): String = when (code) {
-      0 -> "Ясное небо"
+      0 -> "Ясно"
       1 -> "Преимущественно ясно"
       2 -> "Переменная облачность"
       3 -> "Пасмурно"
-      45, 48 -> "Туман и дымка"
+      45, 48 -> "Туман"
       51, 53, 55 -> "Морось"
       56, 57 -> "Ледяная морось"
       61, 63, 65 -> "Дождь"
       66, 67 -> "Ледяной дождь"
-      71, 73, 75, 77 -> "Снегопад"
-      80, 81, 82 -> "Ливневый дождь"
+      71, 73, 75, 77 -> "Снег"
+      80, 81, 82 -> "Ливень"
       85, 86 -> "Снежный ливень"
       95, 96, 99 -> "Гроза"
-      else -> "Облачно с прояснениями"
+      else -> "Нет описания"
     }
   }
 }

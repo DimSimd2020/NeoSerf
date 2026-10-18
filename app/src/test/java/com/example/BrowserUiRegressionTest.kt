@@ -9,16 +9,19 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -27,13 +30,10 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import com.example.data.model.BrowserTab
-import com.example.data.model.SearchEngine
 import com.example.ui.components.TopOmniboxBar
 import com.example.ui.theme.NeoSerfTheme
 import org.junit.Assert.assertEquals
@@ -48,52 +48,51 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "w360dp-h720dp-xhdpi")
 class BrowserUiRegressionTest {
+  @get:Rule(order = 0) val onboardingDone = OnboardingDoneRule()
+  @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
 
-  @get:Rule
-  val composeRule = createAndroidComposeRule<MainActivity>()
-
-  @Test
-  fun hardwareEnterDoesNotOpenSearchEngineDropdown() {
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("omnibox_input").performClick()
-    composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
-    composeRule.onNodeWithTag("omnibox_input").performKeyInput {
-      pressKey(Key.Enter)
-    }
-    composeRule.waitForIdle()
-    composeRule.onNodeWithText("Универсальный поиск Google").assertDoesNotExist()
-    composeRule.onNodeWithTag("search_engine_selector").assertIsDisplayed()
-  }
-
-  @Test
-  fun hardwareEnterDoesNotOpenShieldSheet() {
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("omnibox_input").performClick()
-    composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
-    composeRule.onNodeWithTag("omnibox_input").performKeyInput {
-      pressKey(Key.Enter)
-    }
-    composeRule.waitForIdle()
+  @Test fun hardwareEnterNavigatesWithoutOpeningSearchSettings() {
+    composeRule.onNodeWithTag("omnibox_input").performClick().performTextInput("example.com")
+    composeRule.onNodeWithTag("omnibox_input").assertTextContains("example.com", substring = true)
+    composeRule.onNodeWithTag("omnibox_input").performKeyInput { pressKey(Key.Enter) }
+    composeRule.onNodeWithTag("start_page").assertDoesNotExist()
+    composeRule.onNodeWithTag("search_engine_selector").assertDoesNotExist()
+    composeRule.onNodeWithTag("browser_overflow_menu").assertDoesNotExist()
     composeRule.onNodeWithTag("adblock_master_switch").assertDoesNotExist()
-    composeRule.onNodeWithText("Блокировка рекламы и трекеров").assertDoesNotExist()
+    composeRule.onNodeWithTag("omnibox_input").assertTextContains("example.com", substring = true)
   }
 
-  @Test
-  fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("omnibox_shield_badge").performClick()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("adblock_master_switch").assertIsDisplayed()
-    composeRule.onNodeWithText("Блокировка рекламы и трекеров").assertIsDisplayed()
-  }
-
-  @Test
-  fun imeGoDoesNotOpenSearchEngineDropdown() {
-    composeRule.waitForIdle()
+  @Test fun imeGoNavigatesWithoutOpeningMenu() {
     composeRule.onNodeWithTag("omnibox_input").performTextInput("example.com")
     composeRule.onNodeWithTag("omnibox_input").performImeAction()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithText("Универсальный поиск Google").assertDoesNotExist()
+    composeRule.onNodeWithTag("browser_overflow_menu").assertDoesNotExist()
+    composeRule.onNodeWithTag("omnibox_input").assertTextContains("example.com", substring = true)
+  }
+
+  @Test fun homeOnlyShowsPrimaryContent() {
+    composeRule.onNodeWithText("NeoSerf").assertIsDisplayed()
+    composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
+    listOf("shield_summary_card", "customize_start_button", "search_engine_selector", "engine_chip_google",
+      "weather_change_city_button", "nav_shield_button").forEach {
+      composeRule.onNodeWithTag(it).assertDoesNotExist()
+    }
+    composeRule.onNodeWithText("Стартовая панель NeoSerf").assertDoesNotExist()
+  }
+
+  @Test fun overflowIsCompactAndSearchEngineLivesInSettings() {
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_settings").assertIsDisplayed()
+    val popup = composeRule.onNodeWithTag("browser_overflow_menu").fetchSemanticsNode().boundsInRoot
+    val home = composeRule.onNodeWithTag("start_page").fetchSemanticsNode().boundsInRoot
+    assertTrue(popup.width < home.width)
+    assertTrue(popup.height < home.height)
+    composeRule.onNodeWithTag("menu_settings").performClick()
+    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").performClick()
+    composeRule.waitUntil(5_000) {
+      composeRule.onAllNodes(hasTestTag("settings_engine_DuckDuckGo") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+    }
+    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").assertIsSelected()
+    composeRule.onNodeWithTag("settings_weather").assertIsDisplayed()
   }
 
   @Test
@@ -121,57 +120,56 @@ class BrowserUiRegressionTest {
     composeRule.onNodeWithTag("browser_content").assertIsFocused()
   }
 
-  @Test
-  fun tabsSheetTitleAndIncognitoChipFitNarrowWidth() {
-    composeRule.waitForIdle()
+  @Test fun tabsSheetFitsNarrowWidth() {
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
-    composeRule.waitForIdle()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_regular").assertIsDisplayed()
-    composeRule.onNodeWithText("Инкогнито (0)", substring = true).assertIsDisplayed()
   }
 
-  @Test
-  fun shieldCardTitleDoesNotBreakMidWord() {
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("shield_summary_card").performScrollTo()
-    composeRule.waitForIdle()
-    composeRule.onNodeWithTag("shield_summary_title", useUnmergedTree = true).assertIsDisplayed()
-    composeRule.onNodeWithTag("shield_summary_title", useUnmergedTree = true)
-      .assertTextEquals("Щит приватности NeoSerf")
+  @Test fun newTabStartsWithAnEmptySearchField() {
+    composeRule.onNodeWithTag("omnibox_input").performTextInput("unfinished query")
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_new_tab").performClick()
+    composeRule.onNodeWithTag("omnibox_input").assertTextEquals("")
+  }
 
-    val layouts = mutableListOf<TextLayoutResult>()
-    val getter = composeRule.onNodeWithTag("shield_summary_title", useUnmergedTree = true)
-      .fetchSemanticsNode()
-      .config[SemanticsActions.GetTextLayoutResult]
-    assertTrue(getter.action!!.invoke(layouts))
-    val layout = layouts.first()
-    val text = layout.layoutInput.text.text
-    val word = "приватности"
-    val start = text.indexOf(word)
-    assertTrue(start >= 0)
-    val startLine = layout.getLineForOffset(start)
-    val endLine = layout.getLineForOffset(start + word.length - 1)
-    assertEquals("Title must not break inside '$word'", startLine, endLine)
+  @Test fun themeChoiceSurvivesActivityRecreation() {
+    fun openSettings() {
+      composeRule.onNodeWithTag("nav_menu_button").performClick()
+      composeRule.onNodeWithTag("menu_settings").performClick()
+    }
+    openSettings()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performClick()
+    composeRule.waitUntil(5_000) {
+      composeRule.onAllNodes(hasTestTag("settings_theme_LIGHT") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+    }
+    composeRule.activityRule.scenario.recreate()
+    openSettings()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").assertIsSelected()
+    composeRule.onNodeWithTag("settings_theme_SYSTEM").performClick()
+  }
+
+  @Test fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_item_shield").performClick()
+    composeRule.onNodeWithTag("adblock_master_switch").assertIsDisplayed()
+    val label = composeRule.onNodeWithText("Блокировка рекламы и трекеров").fetchSemanticsNode().boundsInRoot
+    val toggle = composeRule.onNodeWithTag("adblock_master_switch").fetchSemanticsNode().boundsInRoot
+    assertTrue(label.right <= toggle.left)
   }
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29], qualifiers = "w720dp-h1280dp-mdpi")
 class BrowserUiRegressionWideTest {
-
-  @get:Rule
-  val composeRule = createAndroidComposeRule<MainActivity>()
-
-  @Test
-  fun tabsSheetFits720DpWidth() {
-    composeRule.waitForIdle()
+  @get:Rule(order = 0) val onboardingDone = OnboardingDoneRule()
+  @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
+  @Test fun homeAndTabsFitWideWidth() {
+    composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
     composeRule.onNodeWithTag("nav_tabs_button").performClick()
-    composeRule.waitForIdle()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
-    composeRule.onNodeWithText("Инкогнито (0)", substring = true).assertIsDisplayed()
   }
 }
 
@@ -210,13 +208,9 @@ class OmniboxSubmitGuardTest {
         Column {
           TopOmniboxBar(
             activeTab = BrowserTab(),
-            selectedEngine = SearchEngine.GOOGLE,
             isBookmarked = false,
             adBlockEnabled = true,
-            onSelectSearchEngine = {},
             onSubmitInput = { submits++ },
-            onToggleReaderMode = {},
-            onToggleDesktopMode = {},
             onToggleBookmark = {},
             onReload = {},
             onOpenShieldSheet = {},
@@ -256,12 +250,8 @@ class OmniboxSubmitGuardTest {
         Column {
           TopOmniboxBar(
             activeTab = BrowserTab(),
-            selectedEngine = SearchEngine.GOOGLE,
             isBookmarked = false,
             adBlockEnabled = true,
-            onSelectSearchEngine = {},
-            onToggleReaderMode = {},
-            onToggleDesktopMode = {},
             onToggleBookmark = {},
             onReload = {},
             onOpenShieldSheet = {},
@@ -301,13 +291,9 @@ class OmniboxSubmitGuardTest {
         Column {
           TopOmniboxBar(
             activeTab = BrowserTab(),
-            selectedEngine = SearchEngine.GOOGLE,
             isBookmarked = false,
             adBlockEnabled = true,
-            onSelectSearchEngine = {},
             onSubmitInput = { submits++ },
-            onToggleReaderMode = {},
-            onToggleDesktopMode = {},
             onToggleBookmark = {},
             onReload = {},
             onOpenShieldSheet = {},

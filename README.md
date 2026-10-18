@@ -2,7 +2,23 @@
 
 A fast, private Android browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Stack:** native Android (Kotlin, Jetpack Compose, Gradle). Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.0.5` (`versionCode` 6). Without Firebase config the app opens a local guest browser instead of crashing.
+**Android:** Kotlin, Jetpack Compose, Gradle. Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.2.1` (`versionCode` 8). Without Firebase config the app opens a local guest browser instead of crashing. The existing guest repository stores bookmarks, history and vault entries in memory; they do not survive process termination.
+
+**Desktop:** native C++17, Qt Widgets and Qt WebEngine. See [desktop build instructions](desktop/README.md). Windows CI builds a portable runtime package; no Tauri, Rust, Electron or Node.js runtime is used by the app.
+
+## Interface and weather
+
+The start page uses a uniform neutral gray (`#191919`), restrained blue accents (`#459fff`), a centered vector logo, search field and compact weather. Search providers, protection and customization are available through the compact translucent overflow menu. Shortcuts can be enabled in Settings; they are hidden by default.
+
+The fin logo has a transparent background and a larger home-page size on both platforms. Desktop tabs sit above the address bar; the selected tab joins the navigation surface, while the new-tab button follows the compact tab strip. Overflow scrolls without hiding the new-tab button.
+
+Pixel Launcher adds a colored shadow to suggested apps on the home screen. Long-press the suggested NeoSerf icon and choose **Pin** to use an ordinary shortcut without that ring; see [Google's launcher instructions](https://support.google.com/pixelphone/answer/2781850). The application icon assets do not contain an outline.
+
+Settings → Оформление offers **Как на устройстве**, **Светлая** and **Тёмная** on Android and desktop. The default follows the device theme and responds to changes while the app is open; a manual choice is saved across launches. Light mode uses neutral gray (`#f3f3f3`) with a darker blue accent (`#166ad8`) for contrast. The supplied blue/cyan application logo stays the same in both themes.
+
+All application action and weather icons come from the custom SVG set in `desktop/assets/icons/`. Qt renders those sources with the current palette; Android uses generated native Compose vectors. After editing an SVG, run `python tools/generate_icons.py` to update the Android vectors and Qt resource list. No SVG runtime library is added to Android.
+
+Weather uses [Open-Meteo](https://open-meteo.com/) and detects the network region through [ipwho.is](https://ipwhois.io/). On Android, Settings → Уточнить местоположение requests approximate location permission; once allowed, fresh device coordinates take precedence. Without permission or a usable device location, network detection remains automatic. A VPN can change the network region. No fixed city or invented temperature is substituted for errors. Current conditions refresh every 30 minutes while the widget is enabled. Android requires `INTERNET` and optional `ACCESS_COARSE_LOCATION`; no location API key or background-location permission is needed.
 
 ## Build locally
 

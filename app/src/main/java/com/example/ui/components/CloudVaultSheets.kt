@@ -19,17 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import com.example.ui.icons.NeoIcons
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -100,7 +90,7 @@ fun BookmarksSheet(
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
-            imageVector = Icons.Default.Bookmark,
+            imageVector = NeoIcons.Bookmark,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
           )
@@ -116,7 +106,7 @@ fun BookmarksSheet(
           onClick = { showAddDialog = true },
           modifier = Modifier.testTag("add_bookmark_dialog_button")
         ) {
-          Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+          Icon(imageVector = NeoIcons.Add, contentDescription = null, modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(4.dp))
           Text(text = stringResource(R.string.action_save))
         }
@@ -227,7 +217,7 @@ fun BookmarksSheet(
 
                     IconButton(onClick = { onDeleteBookmark(bm.id) }) {
                       Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = NeoIcons.Delete,
                         contentDescription = stringResource(R.string.action_delete),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                       )
@@ -333,7 +323,7 @@ fun PasswordVaultSheet(
           modifier = Modifier.weight(1f)
         ) {
           Icon(
-            imageVector = Icons.Default.Lock,
+            imageVector = NeoIcons.Lock,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
           )
@@ -356,7 +346,7 @@ fun PasswordVaultSheet(
           onClick = { showAddPasswordDialog = true },
           modifier = Modifier.testTag("add_password_button")
         ) {
-          Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+          Icon(imageVector = NeoIcons.Add, contentDescription = null, modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(4.dp))
           Text(text = stringResource(R.string.action_save))
         }
@@ -435,7 +425,7 @@ fun PasswordVaultSheet(
 
                       IconButton(onClick = { onDeletePassword(entry.id) }) {
                         Icon(
-                          imageVector = Icons.Default.Delete,
+                          imageVector = NeoIcons.Delete,
                           contentDescription = stringResource(R.string.action_delete),
                           tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -467,7 +457,7 @@ fun PasswordVaultSheet(
                           onClick = { revealedIds[entry.id] = !isRevealed }
                         ) {
                           Icon(
-                            imageVector = if (isRevealed) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            imageVector = if (isRevealed) NeoIcons.VisibilityOff else NeoIcons.Visibility,
                             contentDescription = stringResource(R.string.passwords_show_hide),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
@@ -479,7 +469,7 @@ fun PasswordVaultSheet(
                           }
                         ) {
                           Icon(
-                            imageVector = Icons.Default.ContentCopy,
+                            imageVector = NeoIcons.ContentCopy,
                             contentDescription = stringResource(R.string.passwords_copy_action),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
@@ -495,7 +485,7 @@ fun PasswordVaultSheet(
                       },
                       modifier = Modifier.fillMaxWidth()
                     ) {
-                      Icon(imageVector = Icons.Default.Key, contentDescription = null, modifier = Modifier.size(16.dp))
+                      Icon(imageVector = NeoIcons.Key, contentDescription = null, modifier = Modifier.size(16.dp))
                       Spacer(modifier = Modifier.width(6.dp))
                       Text(text = stringResource(R.string.passwords_autofill_action))
                     }
@@ -556,7 +546,7 @@ fun PasswordVaultSheet(
             modifier = Modifier.fillMaxWidth()
           ) {
             Icon(
-              imageVector = Icons.Default.AutoFixHigh,
+              imageVector = NeoIcons.AutoFixHigh,
               contentDescription = null,
               modifier = Modifier.size(16.dp)
             )
@@ -627,7 +617,7 @@ fun HistorySheet(
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
           Icon(
-            imageVector = Icons.Default.History,
+            imageVector = NeoIcons.History,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary
           )
@@ -740,7 +730,7 @@ fun HistorySheet(
 
                   IconButton(onClick = { onDeleteEntry(item.id) }) {
                     Icon(
-                      imageVector = Icons.Default.Delete,
+                      imageVector = NeoIcons.Delete,
                       contentDescription = stringResource(R.string.action_delete),
                       tint = MaterialTheme.colorScheme.onSurfaceVariant,
                       modifier = Modifier.size(18.dp)

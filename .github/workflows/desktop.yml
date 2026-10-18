@@ -1,0 +1,70 @@
+name: Desktop CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Build Windows Qt browser
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Qt
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4
+        with:
+          version: '6.10.3'
+          arch: win64_msvc2022_64
+          modules: 'qtwebengine qtwebchannel qtpositioning qtserialport'
+          archives: 'qtbase qtdeclarative qtsvg qttools qttranslations'
+          cache: true
+      - name: Build, test and package
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+          QTWEBENGINE_CHROMIUM_FLAGS: --disable-gpu
+        run: ./desktop/build.ps1
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSerf-Windows-x64
+          path: desktop/dist/NeoSerf/
+          if-no-files-found: error
+      - name: Build installer
+        id: installer
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ISCC.exe -ErrorAction SilentlyContinue) -and
+              -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+          $version = if ($env:GITHUB_REF -like 'refs/tags/v*') { $env:GITHUB_REF_NAME } else { '' }
+          ./desktop/installer/build.ps1 -Version $version
+          $setup = Get-ChildItem desktop/dist/installer/NeoSerf-Setup-*.exe | Select-Object -First 1
+          "path=$($setup.FullName)" >> $env:GITHUB_OUTPUT
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoSerf-Setup-Windows-x64
+          path: ${{ steps.installer.outputs.path }}
+          if-no-files-found: error
+      - name: Attach installer to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SETUP: ${{ steps.installer.outputs.path }}
+        run: |
+          set -euo pipefail
+          # Android CI publishes the same tag; whichever job finishes first creates the release.
+          gh release upload "$GITHUB_REF_NAME" "$SETUP" --clobber ||
+            gh release create "$GITHUB_REF_NAME" "$SETUP" --title "NeoSerf $GITHUB_REF_NAME" --generate-notes ||
+            gh release upload "$GITHUB_REF_NAME" "$SETUP" --clobber
