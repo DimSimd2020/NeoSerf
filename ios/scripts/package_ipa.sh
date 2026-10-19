@@ -25,7 +25,7 @@ cp -R "$APP_SRC" "$STAGE/Payload/NeoSerf.app"
 
 # Unsigned sideload IPA: Payload/NeoSerf.app zipped as .ipa
 mkdir -p "$ROOT/dist"
-IPA="$ROOT/dist/NeoSerf-${VERSION}.ipa"
+IPA="$ROOT/dist/NeoSerf-${LABEL}.ipa"
 rm -f "$IPA"
 (
   cd "$STAGE"
