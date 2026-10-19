@@ -37,6 +37,12 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>NeoSerf уточняет погоду по вашему местоположению.</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Inter.ttf</string>
+		<string>SpaceGrotesk.ttf</string>
+		<string>JetBrainsMono.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIStatusBarStyle</key>

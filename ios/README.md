@@ -5,6 +5,7 @@ Native SwiftUI + WKWebView port of NeoSerf. Local-only (no Firebase). Sideload t
 - Bundle ID: `com.dimsimd.neoserf`
 - Deployment target: iOS 15+
 - Version: `1.3.3` (`CFBundleVersion` 12)
+- UI: SwiftUI port of the current Android Compose chrome (quiet home, custom SVG/PDF icons, fin logo, top-right bookmarks/menu, settings bottom sheet, weather location prompt, first-run). Local-only, no Firebase.
 
 ## Project
 
@@ -32,3 +33,13 @@ xcodebuild -project NeoSerf.xcodeproj -scheme NeoSerf \
 ```
 
 Scarlet re-signs the IPA with its own certificate, so the CI artifact is intentionally unsigned.
+
+## Simulator screenshots
+
+CI also builds for the iOS Simulator and runs `NeoSerfUITests` to capture light and dark shots of home, a loaded page, menu, settings, tabs, shield and first-run. They are uploaded as the `ios-screenshots` artifact and committed under [`docs/ios-screenshots/`](../docs/ios-screenshots/).
+
+```bash
+cd ios
+xcodegen generate
+SCREENSHOT_OUTPUT=../docs/ios-screenshots ../ios/scripts/capture_screenshots.sh
+```

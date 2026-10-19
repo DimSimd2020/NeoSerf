@@ -18,6 +18,9 @@ final class BrowserViewModel: ObservableObject {
     @Published var speedDial: [SpeedDialTile] {
         didSet { LocalStore.saveSpeedDial(speedDial) }
     }
+    @Published var passwords: [PasswordEntry] {
+        didSet { LocalStore.savePasswords(passwords) }
+    }
     @Published var weather: WeatherState = .loading
     @Published var statusMessage: String?
     @Published var webCommand: WebCommand?
@@ -26,13 +29,27 @@ final class BrowserViewModel: ObservableObject {
 
     private var commandToken = 0
     private var weatherTask: Task<Void, Never>?
+    private var locationPromptClaimedThisLaunch = false
 
     init() {
-        let prefs = LocalStore.loadPreferences()
+        if UITestLaunch.isUITest {
+            LocalStore.resetForUITest()
+        }
+        var prefs = LocalStore.loadPreferences()
+        if UITestLaunch.forceFirstRun {
+            prefs.onboardingCompleted = false
+        } else if UITestLaunch.skipOnboarding {
+            prefs.onboardingCompleted = true
+        }
+        if UITestLaunch.skipLocation {
+            prefs.locationPromptShown = true
+        }
         preferences = prefs
+        LocalStore.savePreferences(prefs)
         bookmarks = LocalStore.loadBookmarks()
         history = LocalStore.loadHistory()
         speedDial = LocalStore.loadSpeedDial()
+        passwords = LocalStore.loadPasswords()
         let first = BrowserTab()
         tabs = [first]
         activeTabId = first.id
@@ -40,7 +57,21 @@ final class BrowserViewModel: ObservableObject {
             seedSpeedDial()
         }
         ContentBlockerStore.shared.prepare()
-        startWeatherLoop()
+        if UITestLaunch.fixtureWeather {
+            weather = .success(.screenshotFixture)
+        } else {
+            startWeatherLoop()
+        }
+        if UITestLaunch.loadFixture {
+            DispatchQueue.main.async { [weak self] in
+                self?.loadScreenshotFixturePage()
+            }
+        }
+        if let sheet = UITestLaunch.openSheet {
+            DispatchQueue.main.async { [weak self] in
+                self?.activeSheet = ActiveSheet(rawValue: sheet)
+            }
+        }
     }
 
     var activeTab: BrowserTab {
@@ -131,7 +162,9 @@ final class BrowserViewModel: ObservableObject {
 
     static func resolveInputToUrl(_ input: String, engine: SearchEngine) -> String {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.lowercased().hasPrefix("https://") || trimmed.lowercased().hasPrefix("http://") {
+        if trimmed.lowercased().hasPrefix("https://")
+            || trimmed.lowercased().hasPrefix("http://")
+            || trimmed.lowercased().hasPrefix("file://") {
             return trimmed
         }
         let looksLikeDomain = !trimmed.contains(" ") && trimmed.contains(".") &&
@@ -140,6 +173,14 @@ final class BrowserViewModel: ObservableObject {
             return "https://\(trimmed)"
         }
         return engine.buildSearchUrl(trimmed)
+    }
+
+    static func isNavigablePageURL(_ url: String) -> Bool {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return false }
+        let lower = trimmed.lowercased()
+        if lower == "about:blank" || lower.hasPrefix("about:") { return false }
+        return true
     }
 
     func submitAddressOrQuery(_ raw: String) {
@@ -156,6 +197,32 @@ final class BrowserViewModel: ObservableObject {
             $0.progress = 0.15
         }
         emit(.load(resolved))
+        menuExpanded = false
+        activeSheet = nil
+    }
+
+    /// Bundled HTML for screenshot CI. `file://` often never finishes in the Simulator WKWebView.
+    func loadScreenshotFixturePage() {
+        let displayURL = "https://example.com/"
+        let html: String
+        if let url = Bundle.main.url(forResource: "fixture_page", withExtension: "html"),
+           let contents = try? String(contentsOf: url, encoding: .utf8) {
+            html = contents
+        } else {
+            html = """
+            <!DOCTYPE html><html><body style="font-family:sans-serif;padding:28px">
+            <h1>NeoSerf</h1><p>Пример загруженной страницы.</p></body></html>
+            """
+        }
+        updateTab(activeTabId) {
+            $0.url = displayURL
+            $0.title = "Пример страницы"
+            $0.isReaderMode = false
+            $0.readerArticle = nil
+            $0.isLoading = true
+            $0.progress = 0.4
+        }
+        emit(.loadHTML(html: html, baseURL: displayURL))
         menuExpanded = false
         activeSheet = nil
     }
@@ -190,7 +257,9 @@ final class BrowserViewModel: ObservableObject {
 
     func onPageStarted(tabId: UUID, url: String) {
         updateTab(tabId) {
-            $0.url = url
+            if Self.isNavigablePageURL(url) {
+                $0.url = url
+            }
             $0.isLoading = true
             $0.progress = max($0.progress, 0.2)
         }
@@ -204,12 +273,20 @@ final class BrowserViewModel: ObservableObject {
     }
 
     func onPageFinished(tabId: UUID, url: String, title: String?, canGoBack: Bool, canGoForward: Bool) {
-        let domain = AdBlocker.extractDomain(url)
-        let cleanTitle = (title?.isEmpty == false ? title! : (domain.isEmpty ? url : domain))
+        let navigable = Self.isNavigablePageURL(url)
         var record = false
+        var historyTitle = title ?? url
+        var historyURL = url
         updateTab(tabId) {
-            record = !$0.isIncognito && url.hasPrefix("http")
-            $0.url = url
+            let resolvedURL = navigable ? url : $0.url
+            let resolvedDomain = AdBlocker.extractDomain(resolvedURL)
+            let cleanTitle = (title?.isEmpty == false ? title! : (resolvedDomain.isEmpty ? resolvedURL : resolvedDomain))
+            record = !$0.isIncognito && resolvedURL.hasPrefix("http")
+            historyTitle = cleanTitle
+            historyURL = resolvedURL
+            if navigable {
+                $0.url = url
+            }
             $0.title = cleanTitle
             $0.isLoading = false
             $0.progress = 1
@@ -219,8 +296,8 @@ final class BrowserViewModel: ObservableObject {
         if record {
             let entry = HistoryEntry(
                 id: UUID().uuidString,
-                title: cleanTitle,
-                url: url,
+                title: historyTitle,
+                url: historyURL,
                 searchEngine: preferences.searchEngine.displayName,
                 createdAt: Date()
             )
@@ -319,6 +396,21 @@ final class BrowserViewModel: ObservableObject {
         preferences.appTheme = theme
     }
 
+    func completeOnboarding() {
+        preferences.onboardingCompleted = true
+    }
+
+    /// Returns true only the first time it is called while the weather widget is on.
+    func claimLocationPrompt() -> Bool {
+        if UITestLaunch.skipLocation { return false }
+        guard preferences.showWeatherWidget, !preferences.locationPromptShown, !locationPromptClaimedThisLaunch else {
+            return false
+        }
+        locationPromptClaimedThisLaunch = true
+        preferences.locationPromptShown = true
+        return true
+    }
+
     // MARK: - Bookmarks / history / speed dial
 
     func addBookmark(title: String, rawUrl: String, folder: String) {
@@ -377,6 +469,49 @@ final class BrowserViewModel: ObservableObject {
         showMessage("История просмотров очищена")
     }
 
+    func savePassword(siteDomain: String, siteTitle: String, username: String, password: String, notes: String) {
+        let entry = PasswordEntry(
+            id: UUID().uuidString,
+            siteDomain: siteDomain,
+            siteTitle: siteTitle,
+            username: username,
+            password: password,
+            notes: notes,
+            createdAt: Date()
+        )
+        passwords.insert(entry, at: 0)
+        showMessage("Пароль сохранён")
+    }
+
+    func deletePassword(_ id: String) {
+        passwords.removeAll { $0.id == id }
+    }
+
+    func generateStrongPassword() -> String {
+        let alphabet = Array("ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*")
+        return String((0..<16).compactMap { _ in alphabet.randomElement() })
+    }
+
+    func autofillMatchingSiteForActiveTab() {
+        let domain = AdBlocker.extractDomain(activeTab.url)
+        guard !domain.isEmpty else {
+            showMessage("Откройте сайт, чтобы заполнить пароль")
+            return
+        }
+        guard let match = passwords.first(where: { domain == $0.siteDomain || domain.hasSuffix(".\($0.siteDomain)") }) else {
+            showMessage("Для этого сайта нет сохранённого пароля")
+            return
+        }
+        emit(.autofill(username: match.username, password: match.password))
+        showMessage("Пароль заполнен")
+    }
+
+    func autofillPassword(_ entry: PasswordEntry) {
+        emit(.autofill(username: entry.username, password: entry.password))
+        showMessage("Пароль заполнен")
+        activeSheet = nil
+    }
+
     private func seedSpeedDial() {
         let defaults: [(String, String, String)] = [
             ("Википедия", "https://ru.wikipedia.org", "Энциклопедия"),
@@ -405,6 +540,10 @@ final class BrowserViewModel: ObservableObject {
 
     func refreshWeather() async {
         guard preferences.showWeatherWidget else { return }
+        if UITestLaunch.fixtureWeather {
+            weather = .success(.screenshotFixture)
+            return
+        }
         weather = .loading
         do {
             var lat: Double?

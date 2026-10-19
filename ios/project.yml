@@ -34,6 +34,12 @@ settings:
     TARGETED_DEVICE_FAMILY: "1,2"
     CLANG_ENABLE_MODULES: YES
     ALWAYS_SEARCH_USER_PATHS: NO
+    CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]: YES
+    CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]: NO
+    CODE_SIGN_IDENTITY[sdk=iphonesimulator*]: "-"
+    ARCHS[sdk=iphonesimulator*]: "$(ARCHS_STANDARD)"
+    ONLY_ACTIVE_ARCH[sdk=iphonesimulator*]: YES
+    EXCLUDED_ARCHS[sdk=iphonesimulator*]: ""
 targets:
   NeoSerf:
     type: application
@@ -66,13 +72,50 @@ targets:
         EXCLUDED_ARCHS[sdk=iphoneos*]: "armv7 armv7s i386 x86_64"
         ENABLE_PREVIEWS: NO
         SWIFT_STRICT_CONCURRENCY: minimal
+        CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]: YES
+        CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]: NO
+        CODE_SIGN_IDENTITY[sdk=iphonesimulator*]: "-"
+        ARCHS[sdk=iphonesimulator*]: "$(ARCHS_STANDARD)"
+        ONLY_ACTIVE_ARCH[sdk=iphonesimulator*]: YES
+        EXCLUDED_ARCHS[sdk=iphonesimulator*]: ""
+  NeoSerfUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: NeoSerfUITests
+    settings:
+      base:
+        PRODUCT_NAME: NeoSerfUITests
+        PRODUCT_MODULE_NAME: NeoSerfUITests
+        PRODUCT_BUNDLE_IDENTIFIER: com.dimsimd.neoserf.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        DEVELOPMENT_TEAM: ""
+        TEST_TARGET_NAME: NeoSerf
+        CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]: YES
+        CODE_SIGNING_REQUIRED[sdk=iphonesimulator*]: NO
+        CODE_SIGN_IDENTITY[sdk=iphonesimulator*]: "-"
+        ARCHS[sdk=iphonesimulator*]: "$(ARCHS_STANDARD)"
+        ONLY_ACTIVE_ARCH[sdk=iphonesimulator*]: YES
+    dependencies:
+      - target: NeoSerf
 schemes:
   NeoSerf:
     build:
       targets:
         NeoSerf: all
+        NeoSerfUITests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - NeoSerfUITests
     archive:
       config: Release
     profile:
