@@ -4,7 +4,7 @@ Native SwiftUI + WKWebView port of NeoSerf. Local-only (no Firebase). Sideload t
 
 - Bundle ID: `com.dimsimd.neoserf`
 - Deployment target: iOS 15+
-- Version: `1.3.3` (`CFBundleVersion` 12)
+- Version: `1.3.4` (`CFBundleVersion` 13)
 - UI: SwiftUI port of the current Android Compose chrome (quiet home, custom SVG/PDF icons, fin logo, top-right bookmarks/menu, settings bottom sheet, weather location prompt, first-run). Local-only, no Firebase.
 
 ## Project
@@ -29,7 +29,7 @@ xcodebuild -project NeoSerf.xcodeproj -scheme NeoSerf \
   -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
   ARCHS=arm64 ONLY_ACTIVE_ARCH=NO build
-../ios/scripts/package_ipa.sh 1.3.3
+../ios/scripts/package_ipa.sh 1.3.4
 ```
 
 Scarlet re-signs the IPA with its own certificate, so the CI artifact is intentionally unsigned.

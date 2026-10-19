@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName("NeoSerf");
     QCoreApplication::setApplicationName("NeoSerf");
-    QCoreApplication::setApplicationVersion("1.3.3");
+    QCoreApplication::setApplicationVersion("1.3.4");
     QApplication::setStyle("Fusion");
     Language language;
     language.apply(QSettings().value("appearance/language", "system").toString());
