@@ -5,7 +5,7 @@ These images are captured on the macOS GitHub Actions runner by `NeoSerfUITests/
 | File | Screen |
 | --- | --- |
 | `home-light.png` / `home-dark.png` | Quiet start page (fin logo, search, weather, top-right bookmarks/menu) |
-| `loaded-light.png` / `loaded-dark.png` | Omnibox top bar on a loaded page |
+| `loaded-light.png` / `loaded-dark.png` | Omnibox top bar on a loaded fixture page (`https://example.com/`) |
 | `menu-light.png` / `menu-dark.png` | Overflow menu |
 | `settings-light.png` / `settings-dark.png` | Settings bottom sheet |
 | `tabs-light.png` / `tabs-dark.png` | Tabs sheet with incognito |
