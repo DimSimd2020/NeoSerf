@@ -8,6 +8,12 @@ A fast, private browser with a graphite / neon-blue theme, built-in ad and track
 
 **iOS:** SwiftUI and WKWebView in `ios/`. Bundle ID `com.dimsimd.neoserf`, iOS 15+, local-only (no Firebase). CI builds an unsigned IPA for Scarlet sideload. See [iOS build instructions](ios/README.md).
 
+## Contributors
+
+NeoSerf is maintained by [DimSimd2020](https://github.com/DimSimd2020). See the [GitHub contributors](https://github.com/DimSimd2020/NeoSerf/graphs/contributors) for the project's contributors.
+
+[OpenAI Codex](https://github.com/codex) contributed to the initial Android home-page redesign, custom SVG icons, adaptive themes, and native Qt/C++ desktop foundation.
+
 ## Interface and weather
 
 The start page uses a uniform neutral gray (`#191919`), restrained blue accents (`#459fff`), a centered vector logo, search field and compact weather. Search providers, protection and customization are available through the compact translucent overflow menu. Shortcuts can be enabled in Settings; they are hidden by default.
