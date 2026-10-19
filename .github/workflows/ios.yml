@@ -95,9 +95,12 @@ jobs:
 
       - name: Upload iOS screenshots
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ios-screenshots
-          path: docs/ios-screenshots/*.png
+          path: |
+            docs/ios-screenshots/
+            ios/build-screenshots/NeoSerfUITests.xcresult
           if-no-files-found: error
 
       - name: Upload IPA artifact

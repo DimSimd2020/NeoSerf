@@ -36,21 +36,42 @@ print(order[0][1])
 echo "Using destination: $DESTINATION"
 echo "Writing screenshots to $OUT"
 
-export SCREENSHOT_OUTPUT="$OUT"
+RESULT_BUNDLE="$IOS/build-screenshots/NeoSerfUITests.xcresult"
+rm -rf "$RESULT_BUNDLE"
 
+set +e
 xcodebuild test \
   -project NeoSerf.xcodeproj \
   -scheme NeoSerf \
   -destination "$DESTINATION" \
   -only-testing:NeoSerfUITests/ScreenshotTests \
   -derivedDataPath "$IOS/build-screenshots" \
+  -resultBundlePath "$RESULT_BUNDLE" \
   CODE_SIGNING_ALLOWED=YES \
   CODE_SIGN_IDENTITY=- \
   CODE_SIGNING_REQUIRED=NO
+TEST_STATUS=$?
+set -e
 
+if [ ! -d "$RESULT_BUNDLE" ]; then
+  RESULT_BUNDLE="$(find "$IOS/build-screenshots/Logs/Test" -name '*.xcresult' | tail -n 1 || true)"
+fi
+
+if [ -n "${RESULT_BUNDLE:-}" ] && [ -d "$RESULT_BUNDLE" ]; then
+  echo "Exporting attachments from $RESULT_BUNDLE"
+  python3 "$ROOT/ios/scripts/export_xcresult_screenshots.py" "$RESULT_BUNDLE" "$OUT" || true
+  # Also pick up any PNGs the test process managed to write.
+  find "$IOS/build-screenshots" -name '*.png' -exec cp -n {} "$OUT"/ \; 2>/dev/null || true
+fi
+
+# Keep README if the directory already had one.
 COUNT="$(find "$OUT" -name '*.png' | wc -l | tr -d ' ')"
 echo "Captured ${COUNT} PNG files in $OUT"
 ls -la "$OUT"
+if [ "$TEST_STATUS" -ne 0 ]; then
+  echo "xcodebuild test failed with status $TEST_STATUS" >&2
+  exit "$TEST_STATUS"
+fi
 if [ "$COUNT" -lt 8 ]; then
   echo "Expected at least 8 screenshots (home/loaded/menu/settings/tabs/shield/first-run × light/dark)" >&2
   exit 1
