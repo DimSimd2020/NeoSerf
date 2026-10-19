@@ -275,11 +275,15 @@ final class BrowserViewModel: ObservableObject {
     func onPageFinished(tabId: UUID, url: String, title: String?, canGoBack: Bool, canGoForward: Bool) {
         let navigable = Self.isNavigablePageURL(url)
         var record = false
+        var historyTitle = title ?? url
+        var historyURL = url
         updateTab(tabId) {
             let resolvedURL = navigable ? url : $0.url
             let resolvedDomain = AdBlocker.extractDomain(resolvedURL)
             let cleanTitle = (title?.isEmpty == false ? title! : (resolvedDomain.isEmpty ? resolvedURL : resolvedDomain))
             record = !$0.isIncognito && resolvedURL.hasPrefix("http")
+            historyTitle = cleanTitle
+            historyURL = resolvedURL
             if navigable {
                 $0.url = url
             }
@@ -292,8 +296,8 @@ final class BrowserViewModel: ObservableObject {
         if record {
             let entry = HistoryEntry(
                 id: UUID().uuidString,
-                title: cleanTitle,
-                url: url,
+                title: historyTitle,
+                url: historyURL,
                 searchEngine: preferences.searchEngine.displayName,
                 createdAt: Date()
             )
