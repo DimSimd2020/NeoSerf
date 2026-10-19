@@ -2,7 +2,7 @@
 
 A fast, private browser with a graphite / neon-blue theme, built-in ad and tracker blocking, reader mode, desktop mode, incognito tabs, and (on Android) Google-account cloud sync for bookmarks, history, and an AES-GCM password vault.
 
-**Android:** Kotlin, Jetpack Compose, Gradle. Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.3.3` (`versionCode` 12). Without Firebase config the app opens a local guest browser instead of crashing. The existing guest repository stores bookmarks, history and vault entries in memory; they do not survive process termination.
+**Android:** Kotlin, Jetpack Compose, Gradle. Application ID `com.aistudio.neoserf.kxpqzm`, `versionName` `1.3.4` (`versionCode` 13). Without Firebase config the app opens a local guest browser instead of crashing. The existing guest repository stores bookmarks, history and vault entries in memory; they do not survive process termination.
 
 **Desktop:** native C++17, Qt Widgets and Qt WebEngine. See [desktop build instructions](desktop/README.md). Windows CI builds a portable runtime package; no Tauri, Rust, Electron or Node.js runtime is used by the app.
 

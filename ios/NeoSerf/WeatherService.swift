@@ -113,7 +113,7 @@ enum WeatherService {
     private static func requestJSON(_ urlString: String) async throws -> [String: Any] {
         guard let url = URL(string: urlString) else { throw WeatherError.network }
         var request = URLRequest(url: url, timeoutInterval: 12)
-        request.setValue("NeoSerf/1.3.3", forHTTPHeaderField: "User-Agent")
+        request.setValue("NeoSerf/1.3.4", forHTTPHeaderField: "User-Agent")
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {

@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-VERSION="${1:-1.3.3}"
+VERSION="${1:-1.3.4}"
 DERIVED="${DERIVED_DATA_PATH:-$ROOT/build}"
 CONFIG="${CONFIGURATION:-Release}"
 APP_SRC="$(find "$DERIVED/Build/Products/${CONFIG}-iphoneos" -name 'NeoSerf.app' -type d | head -n 1)"
@@ -53,8 +53,8 @@ if [ "$ID" != "com.dimsimd.neoserf" ]; then
   echo "Unexpected CFBundleIdentifier: $ID" >&2
   exit 1
 fi
-if [ "$VER" != "1.3.3" ]; then
-  echo "Unexpected CFBundleShortVersionString: $VER (expected 1.3.3)" >&2
+if [ "$VER" != "$VERSION" ]; then
+  echo "Unexpected CFBundleShortVersionString: $VER (expected $VERSION)" >&2
   exit 1
 fi
 echo "$ARCHS" | grep -q 'arm64' || { echo "Binary is not arm64: $ARCHS" >&2; exit 1; }
