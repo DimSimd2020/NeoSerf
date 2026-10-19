@@ -139,7 +139,7 @@ enum WeatherService {
     enum WeatherError: Error { case region, parse, network }
 }
 
-final class LocationHelper: NSObject, CLLocationManagerDelegate {
+final class LocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Sendable {
     static let shared = LocationHelper()
     private let manager = CLLocationManager()
     private var continuation: CheckedContinuation<CLLocation?, Never>?

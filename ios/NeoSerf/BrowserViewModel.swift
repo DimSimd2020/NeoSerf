@@ -306,7 +306,9 @@ final class BrowserViewModel: ObservableObject {
 
     func setShowWeather(_ show: Bool) {
         preferences.showWeatherWidget = show
-        if show { refreshWeather() }
+        if show {
+            Task { await refreshWeather() }
+        }
     }
 
     func setShowSpeedDial(_ show: Bool) {

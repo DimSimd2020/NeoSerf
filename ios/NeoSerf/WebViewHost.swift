@@ -151,8 +151,6 @@ final class WebContainerView: UIView {
     private var currentId: UUID?
     private let regularStore = WKWebsiteDataStore.default()
     private let incognitoStore = WKWebsiteDataStore.nonPersistent()
-    private var regularProcess = WKProcessPool()
-    private var incognitoProcess = WKProcessPool()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -223,7 +221,6 @@ final class WebContainerView: UIView {
     private func webView(for tab: BrowserTab, model: BrowserViewModel) -> WKWebView {
         if let existing = pool[tab.id] { return existing }
         let config = WKWebViewConfiguration()
-        config.processPool = tab.isIncognito ? incognitoProcess : regularProcess
         config.websiteDataStore = tab.isIncognito ? incognitoStore : regularStore
         config.allowsInlineMediaPlayback = true
         config.defaultWebpagePreferences.allowsContentJavaScript = true
