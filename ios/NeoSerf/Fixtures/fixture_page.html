@@ -6,16 +6,23 @@
   <title>Пример страницы</title>
   <style>
     html, body { margin: 0; padding: 0; background: #ffffff; color: #1b1b1b; font-family: -apple-system, sans-serif; }
-    main { padding: 28px 22px; }
-    h1 { font-size: 28px; margin: 0 0 12px; }
+    header { background: #166AD8; color: #fff; padding: 36px 22px 22px; }
+    header h1 { font-size: 28px; margin: 0 0 6px; font-weight: 700; }
+    header p { margin: 0; opacity: 0.9; font-size: 15px; }
+    main { padding: 24px 22px; }
     p { font-size: 16px; line-height: 1.5; margin: 0 0 10px; color: #444; }
+    .card { background: #F3F3F3; border-radius: 16px; padding: 16px 18px; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <main>
+  <header>
     <h1>NeoSerf</h1>
+    <p>example.com</p>
+  </header>
+  <main>
     <p>Пример загруженной страницы для скриншота интерфейса.</p>
     <p>Адресная строка, закладки и меню остаются сверху, как на Android.</p>
+    <div class="card">Нижней панели нет — закладки и меню справа сверху.</div>
   </main>
 </body>
 </html>

@@ -24,7 +24,7 @@ final class ScreenshotTests: XCTestCase {
         if screen == "home" {
             _ = wait(app, "start_page") || wait(app, "nav_menu_button")
         } else if screen == "loaded" {
-            _ = wait(app, "omnibox_input") || wait(app, "nav_menu_button")
+            _ = wait(app, "page_loaded") || wait(app, "omnibox_reload_button") || wait(app, "omnibox_input")
         } else if screen == "settings" {
             _ = wait(app, "settings_sheet") || wait(app, "settings_theme_SYSTEM")
         } else if screen == "tabs" {
@@ -32,7 +32,7 @@ final class ScreenshotTests: XCTestCase {
         } else if screen == "shield" {
             _ = wait(app, "adblock_master_switch")
         }
-        Thread.sleep(forTimeInterval: 0.8)
+        Thread.sleep(forTimeInterval: screen == "loaded" ? 1.6 : 0.8)
         saveScreenshot(app, name: "\(screen)-\(appearance)", output: output)
         app.terminate()
     }

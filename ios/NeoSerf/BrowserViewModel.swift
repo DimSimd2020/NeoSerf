@@ -62,9 +62,9 @@ final class BrowserViewModel: ObservableObject {
         } else {
             startWeatherLoop()
         }
-        if UITestLaunch.loadFixture, let url = Bundle.main.url(forResource: "fixture_page", withExtension: "html") {
+        if UITestLaunch.loadFixture {
             DispatchQueue.main.async { [weak self] in
-                self?.submitAddressOrQuery(url.absoluteString)
+                self?.loadScreenshotFixturePage()
             }
         }
         if let sheet = UITestLaunch.openSheet {
@@ -175,6 +175,14 @@ final class BrowserViewModel: ObservableObject {
         return engine.buildSearchUrl(trimmed)
     }
 
+    static func isNavigablePageURL(_ url: String) -> Bool {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return false }
+        let lower = trimmed.lowercased()
+        if lower == "about:blank" || lower.hasPrefix("about:") { return false }
+        return true
+    }
+
     func submitAddressOrQuery(_ raw: String) {
         let input = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !input.isEmpty else { return }
@@ -189,6 +197,32 @@ final class BrowserViewModel: ObservableObject {
             $0.progress = 0.15
         }
         emit(.load(resolved))
+        menuExpanded = false
+        activeSheet = nil
+    }
+
+    /// Bundled HTML for screenshot CI. `file://` often never finishes in the Simulator WKWebView.
+    func loadScreenshotFixturePage() {
+        let displayURL = "https://example.com/"
+        let html: String
+        if let url = Bundle.main.url(forResource: "fixture_page", withExtension: "html"),
+           let contents = try? String(contentsOf: url, encoding: .utf8) {
+            html = contents
+        } else {
+            html = """
+            <!DOCTYPE html><html><body style="font-family:sans-serif;padding:28px">
+            <h1>NeoSerf</h1><p>Пример загруженной страницы.</p></body></html>
+            """
+        }
+        updateTab(activeTabId) {
+            $0.url = displayURL
+            $0.title = "Пример страницы"
+            $0.isReaderMode = false
+            $0.readerArticle = nil
+            $0.isLoading = true
+            $0.progress = 0.4
+        }
+        emit(.loadHTML(html: html, baseURL: displayURL))
         menuExpanded = false
         activeSheet = nil
     }
@@ -223,7 +257,9 @@ final class BrowserViewModel: ObservableObject {
 
     func onPageStarted(tabId: UUID, url: String) {
         updateTab(tabId) {
-            $0.url = url
+            if Self.isNavigablePageURL(url) {
+                $0.url = url
+            }
             $0.isLoading = true
             $0.progress = max($0.progress, 0.2)
         }
@@ -237,12 +273,16 @@ final class BrowserViewModel: ObservableObject {
     }
 
     func onPageFinished(tabId: UUID, url: String, title: String?, canGoBack: Bool, canGoForward: Bool) {
-        let domain = AdBlocker.extractDomain(url)
-        let cleanTitle = (title?.isEmpty == false ? title! : (domain.isEmpty ? url : domain))
+        let navigable = Self.isNavigablePageURL(url)
         var record = false
         updateTab(tabId) {
-            record = !$0.isIncognito && url.hasPrefix("http")
-            $0.url = url
+            let resolvedURL = navigable ? url : $0.url
+            let resolvedDomain = AdBlocker.extractDomain(resolvedURL)
+            let cleanTitle = (title?.isEmpty == false ? title! : (resolvedDomain.isEmpty ? resolvedURL : resolvedDomain))
+            record = !$0.isIncognito && resolvedURL.hasPrefix("http")
+            if navigable {
+                $0.url = url
+            }
             $0.title = cleanTitle
             $0.isLoading = false
             $0.progress = 1

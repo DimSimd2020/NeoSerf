@@ -39,7 +39,7 @@ struct BrowserView: View {
                 }
                 ZStack(alignment: .topTrailing) {
                     content
-                        .accessibilityIdentifier("browser_content")
+                        .accessibilityIdentifier(contentIdentifier)
                     if model.activeTab.isStartPage {
                         BrowserTopActions(
                             isBookmarked: false,
@@ -94,6 +94,13 @@ struct BrowserView: View {
         case .history: HistorySheet(model: model)
         case .passwords: PasswordsSheet(model: model)
         }
+    }
+
+    private var contentIdentifier: String {
+        let tab = model.activeTab
+        if tab.isStartPage { return "start_page_host" }
+        if tab.isLoading { return "page_loading" }
+        return "page_loaded"
     }
 
     @ViewBuilder

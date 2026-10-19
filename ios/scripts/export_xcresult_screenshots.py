@@ -81,6 +81,10 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
 
     copied = 0
+    staging = outdir / ".xcresult-export"
+    if staging.exists():
+        shutil.rmtree(staging)
+    staging.mkdir(parents=True, exist_ok=True)
     try:
         subprocess.check_call(
             [
@@ -91,15 +95,34 @@ def main():
                 "--path",
                 xcresult,
                 "--output-path",
-                str(outdir),
+                str(staging),
             ]
         )
-        copied = len(list(outdir.glob("*.png"))) + len(list(outdir.glob("*.jpeg")))
+        manifest_path = staging / "manifest.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text())
+            for group in manifest:
+                for att in group.get("attachments", []):
+                    suggested = att.get("suggestedHumanReadableName") or ""
+                    exported = att.get("exportedFileName")
+                    if not exported:
+                        continue
+                    stem = suggested.split("_0_")[0] if suggested else Path(exported).stem
+                    if stem.startswith("AppIcon"):
+                        continue
+                    src = staging / exported
+                    if src.exists() and src.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+                        dest = outdir / f"{stem}.png"
+                        shutil.copy2(src, dest)
+                        copied += 1
+                        print(f"exported {dest.name}")
         if copied:
-            print(f"xcresulttool export attachments wrote {copied} files")
+            shutil.rmtree(staging, ignore_errors=True)
+            print(f"xcresulttool export attachments wrote {copied} named files")
             return 0
     except Exception as exc:
         print(f"xcresulttool export attachments unavailable: {exc}", file=sys.stderr)
+    shutil.rmtree(staging, ignore_errors=True)
 
     try:
         root = get_json(xcresult)

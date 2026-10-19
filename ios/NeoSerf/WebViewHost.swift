@@ -197,11 +197,17 @@ final class WebContainerView: UIView {
         case .load(let urlString):
             if let url = URL(string: urlString) {
                 if url.isFileURL {
-                    webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                    if let html = try? String(contentsOf: url, encoding: .utf8) {
+                        webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
+                    } else {
+                        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                    }
                 } else {
                     webView.load(URLRequest(url: url))
                 }
             }
+        case .loadHTML(let html, let baseURL):
+            webView.loadHTMLString(html, baseURL: URL(string: baseURL))
         case .reload:
             webView.reload()
         case .back:

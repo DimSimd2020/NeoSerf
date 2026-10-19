@@ -207,6 +207,7 @@ enum WeatherState: Equatable {
 
 enum WebCommandKind: Equatable {
     case load(String)
+    case loadHTML(html: String, baseURL: String)
     case reload
     case back
     case forward
