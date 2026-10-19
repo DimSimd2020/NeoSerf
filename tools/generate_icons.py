@@ -81,7 +81,51 @@ def main():
     resources += [f'assets/icons/{path.name}' for path in sorted((ROOT / 'desktop/assets/icons').glob('*.svg'))]
     (ROOT / 'desktop/resources.qrc').write_text('<RCC>\n  <qresource prefix="/">\n' +
         ''.join(f'    <file>{path}</file>\n' for path in resources) + '  </qresource>\n</RCC>\n', encoding='utf-8')
-    print(f'Generated {len(ICONS)} Compose icons and Qt resource entries from shared SVGs')
+    try:
+        write_ios_pdfs()
+        print(f'Generated {len(ICONS)} Compose icons, iOS PDF assets, and Qt resource entries from shared SVGs')
+    except Exception as exc:
+        print(f'Generated {len(ICONS)} Compose icons and Qt resource entries (iOS PDFs skipped: {exc})')
+
+
+def write_ios_pdfs():
+    """Asset-catalog PDFs so iOS uses the same SVG strokes as Android/desktop."""
+    try:
+        import cairosvg
+    except ImportError as exc:
+        raise RuntimeError('cairosvg is required to emit iOS PDF icons: pip install cairosvg') from exc
+
+    catalog = ROOT / 'ios/NeoSerf/Assets.xcassets'
+
+    def imageset(name, pdf_bytes, template):
+        folder = catalog / f'{name}.imageset'
+        folder.mkdir(parents=True, exist_ok=True)
+        pdf_name = f'{name}.pdf'
+        (folder / pdf_name).write_bytes(pdf_bytes)
+        intent = 'template' if template else 'original'
+        (folder / 'Contents.json').write_text(
+            '{\n'
+            '  "images" : [\n'
+            '    {\n'
+            f'      "filename" : "{pdf_name}",\n'
+            '      "idiom" : "universal"\n'
+            '    }\n'
+            '  ],\n'
+            '  "info" : { "author" : "xcode", "version" : 1 },\n'
+            '  "properties" : {\n'
+            '    "preserves-vector-representation" : true,\n'
+            f'    "template-rendering-intent" : "{intent}"\n'
+            '  }\n'
+            '}\n',
+            encoding='utf-8',
+        )
+
+    for _symbol, name in ICONS.items():
+        svg = (ROOT / f'desktop/assets/icons/{name}.svg').read_text(encoding='utf-8').replace('currentColor', '#000000')
+        imageset(f'icon-{name}', cairosvg.svg2pdf(bytestring=svg.encode('utf-8')), template=True)
+
+    logo = (ROOT / 'desktop/assets/logo.svg').read_bytes()
+    imageset('Logo', cairosvg.svg2pdf(bytestring=logo), template=False)
 
 if __name__ == '__main__':
     main()

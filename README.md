@@ -48,7 +48,7 @@ GitHub Actions builds on push to `main`, tags matching `v*`, pull requests targe
 | --- | --- |
 | `.github/workflows/android.yml` | `NeoSerf-apk` |
 | `.github/workflows/desktop.yml` | Windows package and `NeoSerf-Setup-Windows-x64` installer |
-| `.github/workflows/ios.yml` | unsigned `NeoSerf-ipa` (`CODE_SIGNING_ALLOWED=NO`) |
+| `.github/workflows/ios.yml` | unsigned `NeoSerf-ipa` (`CODE_SIGNING_ALLOWED=NO`) and Simulator screenshots (`ios-screenshots`) |
 
 Pushing a `v*` tag creates a GitHub Release and attaches the APK, Windows installer, and IPA (each job creates the release if it does not exist yet).
 

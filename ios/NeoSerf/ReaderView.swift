@@ -25,31 +25,33 @@ struct ReaderView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Режим чтения")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(NeoFont.titleMedium())
                         .foregroundColor(c.text)
                     if let article = article {
                         Text(article.domain)
-                            .font(.system(size: 12))
+                            .font(NeoFont.bodySmall())
                             .foregroundColor(c.secondary)
                     }
                 }
                 Spacer()
                 Button("Закрыть чтение", action: onClose)
+                    .font(NeoFont.bodyLarge())
                     .foregroundColor(c.text)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             HStack {
                 Button(action: { onFont(max(14, fontSize - 2)) }) {
-                    Image(systemName: "textformat.size.smaller").foregroundColor(c.text)
+                    NeoIcon(name: NeoIcons.textDecrease, size: 18).foregroundColor(c.text)
                 }
+                .accessibilityLabel("Размер текста")
                 Button(action: { onFont(min(28, fontSize + 2)) }) {
-                    Image(systemName: "textformat.size.larger").foregroundColor(c.text)
+                    NeoIcon(name: NeoIcons.textIncrease, size: 18).foregroundColor(c.text)
                 }
                 Spacer()
                 ForEach(ReaderTheme.allCases) { item in
                     Button(item.labelRu) { onTheme(item) }
-                        .font(.system(size: 12, weight: theme == item ? .bold : .regular))
+                        .font(NeoFont.labelLarge().weight(theme == item ? .bold : .regular))
                         .foregroundColor(theme == item ? c.text : c.secondary)
                 }
             }
@@ -60,10 +62,10 @@ struct ReaderView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if let article = article {
                         Text(article.title)
-                            .font(.system(size: CGFloat(fontSize + 6), weight: .bold))
+                            .font(.custom(NeoFont.spaceGrotesk, size: CGFloat(fontSize + 6)).weight(.bold))
                             .foregroundColor(c.text)
                         Text("\(article.byline) · \(article.estimatedMinutes) мин")
-                            .font(.system(size: CGFloat(max(12, fontSize - 4))))
+                            .font(.custom(NeoFont.inter, size: CGFloat(max(12, fontSize - 4))))
                             .foregroundColor(c.secondary)
                         if article.paragraphs.isEmpty {
                             Text("На текущей странице не обнаружено длинной статьи. Откройте любую новость, документацию или статью для чтения без лишних элементов.")
@@ -71,7 +73,7 @@ struct ReaderView: View {
                         } else {
                             ForEach(Array(article.paragraphs.enumerated()), id: \.offset) { _, para in
                                 Text(para)
-                                    .font(.system(size: CGFloat(fontSize)))
+                                    .font(.custom(NeoFont.inter, size: CGFloat(fontSize)))
                                     .foregroundColor(c.text)
                             }
                         }
@@ -81,5 +83,6 @@ struct ReaderView: View {
             }
         }
         .background(c.bg.ignoresSafeArea())
+        .accessibilityIdentifier("reader_mode")
     }
 }

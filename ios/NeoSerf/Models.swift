@@ -19,6 +19,16 @@ enum SearchEngine: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    var description: String {
+        switch self {
+        case .google: return "Универсальный поиск Google"
+        case .duckDuckGo: return "Приватный поиск без отслеживания"
+        case .yandex: return "Поиск по рунету и сервисам"
+        case .bing: return "Глобальный поиск Microsoft"
+        case .brave: return "Независимый приватный индекс"
+        }
+    }
+
     func buildSearchUrl(_ query: String) -> String {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         switch self {
@@ -131,6 +141,16 @@ struct SpeedDialTile: Identifiable, Codable, Equatable {
     var position: Int
 }
 
+struct PasswordEntry: Identifiable, Codable, Equatable {
+    var id: String
+    var siteDomain: String
+    var siteTitle: String
+    var username: String
+    var password: String
+    var notes: String
+    var createdAt: Date
+}
+
 struct BrowserPreferences: Equatable, Codable {
     var appTheme: AppTheme = .system
     var searchEngine: SearchEngine = .google
@@ -144,6 +164,7 @@ struct BrowserPreferences: Equatable, Codable {
     var readerTheme: ReaderTheme = .graphite
     var locationPromptShown: Bool = false
     var speedDialSeeded: Bool = false
+    var onboardingCompleted: Bool = false
 }
 
 struct WeatherForecast: Equatable {
@@ -160,6 +181,22 @@ struct WeatherForecast: Equatable {
     var conditionText: String
     var dailyMaxC: Double
     var dailyMinC: Double
+
+    static let screenshotFixture = WeatherForecast(
+        cityName: "Москва",
+        country: "Россия",
+        temperatureC: 12,
+        apparentTempC: 10,
+        windSpeedKmh: 8,
+        humidityPercent: 64,
+        weatherCode: 2,
+        isDay: true,
+        locationSource: "По сети",
+        dataSource: "Open-Meteo",
+        conditionText: "Переменная облачность",
+        dailyMaxC: 14,
+        dailyMinC: 6
+    )
 }
 
 enum WeatherState: Equatable {
@@ -174,6 +211,7 @@ enum WebCommandKind: Equatable {
     case back
     case forward
     case extractReader
+    case autofill(username: String, password: String)
 }
 
 struct WebCommand: Equatable {
@@ -187,6 +225,7 @@ enum ActiveSheet: String, Identifiable {
     case settings
     case bookmarks
     case history
+    case passwords
 
     var id: String { rawValue }
 }

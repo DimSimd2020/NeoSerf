@@ -7,6 +7,31 @@ struct BrowserView: View {
     var body: some View {
         let scheme = model.preferences.appTheme.colorScheme ?? systemScheme
         let palette = Palette.current(colorScheme: scheme)
+        Group {
+            if !model.preferences.onboardingCompleted {
+                WelcomeView(model: model)
+            } else {
+                browserChrome
+            }
+        }
+        .background(palette.background.ignoresSafeArea())
+        .environment(\.palette, palette)
+        .environment(\.locale, Locale(identifier: "ru"))
+        .preferredColorScheme(forcedScheme)
+        .onAppear { requestLocationIfNeeded() }
+        .onChange(of: model.preferences.onboardingCompleted) { done in
+            if done { requestLocationIfNeeded() }
+        }
+    }
+
+    private var forcedScheme: ColorScheme? {
+        if let appearance = UITestLaunch.appearance {
+            return appearance == "dark" ? .dark : .light
+        }
+        return model.preferences.appTheme.colorScheme
+    }
+
+    private var browserChrome: some View {
         ZStack(alignment: .topTrailing) {
             VStack(spacing: 0) {
                 if !model.activeTab.isStartPage {
@@ -14,6 +39,7 @@ struct BrowserView: View {
                 }
                 ZStack(alignment: .topTrailing) {
                     content
+                        .accessibilityIdentifier("browser_content")
                     if model.activeTab.isStartPage {
                         BrowserTopActions(
                             isBookmarked: false,
@@ -31,31 +57,20 @@ struct BrowserView: View {
                     .onTapGesture { model.menuExpanded = false }
                 BrowserMenuPopup(model: model)
             }
-        }
-        .background(palette.background.ignoresSafeArea())
-        .environment(\.palette, palette)
-        .preferredColorScheme(model.preferences.appTheme.colorScheme)
-        .sheet(item: $model.activeSheet) { sheet in
-            Group {
-                switch sheet {
-                case .tabs: TabsSheet(model: model)
-                case .shield: ShieldSheet(model: model)
-                case .settings: SettingsSheet(model: model)
-                case .bookmarks: BookmarksSheet(model: model)
-                case .history: HistorySheet(model: model)
+            if let sheet = model.activeSheet {
+                NeoBottomSheet(onDismiss: { model.activeSheet = nil }) {
+                    sheetContent(sheet)
                 }
             }
-            .environment(\.palette, palette)
-            .preferredColorScheme(model.preferences.appTheme.colorScheme)
         }
         .overlay(alignment: .bottom) {
             if let message = model.statusMessage {
                 Text(message)
-                    .font(.system(size: 14))
-                    .foregroundColor(palette.text)
+                    .font(NeoFont.bodyMedium())
+                    .foregroundColor(Palette.current(colorScheme: model.preferences.appTheme.colorScheme ?? systemScheme).text)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(palette.surfaceVariant)
+                    .background(Palette.current(colorScheme: model.preferences.appTheme.colorScheme ?? systemScheme).surfaceVariant)
                     .clipShape(Capsule())
                     .padding(.bottom, 24)
                     .onAppear {
@@ -66,6 +81,18 @@ struct BrowserView: View {
                         }
                     }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sheetContent(_ sheet: ActiveSheet) -> some View {
+        switch sheet {
+        case .tabs: TabsSheet(model: model)
+        case .shield: ShieldSheet(model: model)
+        case .settings: SettingsSheet(model: model)
+        case .bookmarks: BookmarksSheet(model: model)
+        case .history: HistorySheet(model: model)
+        case .passwords: PasswordsSheet(model: model)
         }
     }
 
@@ -88,6 +115,14 @@ struct BrowserView: View {
                     onTheme: { model.preferences.readerTheme = $0 }
                 )
             }
+        }
+    }
+
+    private func requestLocationIfNeeded() {
+        guard model.preferences.onboardingCompleted else { return }
+        if model.claimLocationPrompt() {
+            Task { await LocationHelper.shared.request() }
+            Task { await model.refreshWeather() }
         }
     }
 }

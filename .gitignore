@@ -29,6 +29,7 @@ debug.keystore
 /desktop/build*/
 /desktop/dist/
 /ios/build/
+/ios/build-screenshots/
 /ios/dist/
 /ios/*.xcodeproj
 /ios/*.xcworkspace

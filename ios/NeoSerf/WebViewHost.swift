@@ -196,7 +196,11 @@ final class WebContainerView: UIView {
         switch kind {
         case .load(let urlString):
             if let url = URL(string: urlString) {
-                webView.load(URLRequest(url: url))
+                if url.isFileURL {
+                    webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+                } else {
+                    webView.load(URLRequest(url: url))
+                }
             }
         case .reload:
             webView.reload()
@@ -215,6 +219,9 @@ final class WebContainerView: UIView {
                     model.onReaderArticle(Self.parseReader(raw, fallbackTitle: tab.title, fallbackUrl: tab.url), tabId: tab.id)
                 }
             }
+        case .autofill(let username, let password):
+            let js = AdBlocker.buildAutofillJs(username: username, password: password)
+            webView.evaluateJavaScript(js, completionHandler: nil)
         }
     }
 

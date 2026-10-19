@@ -157,16 +157,17 @@ final class LocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Send
         } else {
             status = CLLocationManager.authorizationStatus()
         }
-        if status == .notDetermined {
-            manager.requestWhenInUseAuthorization()
-        }
         if status == .denied || status == .restricted {
             return manager.location
         }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            manager.requestLocation()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            if status == .notDetermined {
+                manager.requestWhenInUseAuthorization()
+            } else {
+                manager.requestLocation()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
                 if let pending = self?.continuation {
                     self?.continuation = nil
                     pending.resume(returning: self?.manager.location)
@@ -183,5 +184,29 @@ final class LocationHelper: NSObject, CLLocationManagerDelegate, @unchecked Send
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         continuation?.resume(returning: manager.location)
         continuation = nil
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status: CLAuthorizationStatus
+        if #available(iOS 14.0, *) {
+            status = manager.authorizationStatus
+        } else {
+            status = CLLocationManager.authorizationStatus()
+        }
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            manager.requestLocation()
+        } else if status == .denied || status == .restricted {
+            continuation?.resume(returning: manager.location)
+            continuation = nil
+        }
+    }
+
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        if status == .authorizedWhenInUse || status == .authorizedAlways {
+            manager.requestLocation()
+        } else if status == .denied || status == .restricted {
+            continuation?.resume(returning: manager.location)
+            continuation = nil
+        }
     }
 }

@@ -4,72 +4,66 @@ struct StartPageView: View {
     @ObservedObject var model: BrowserViewModel
     @Environment(\.palette) private var palette
     @State private var query = ""
-    @State private var focused = false
     @State private var showAddDial = false
     @FocusState private var searchFocused: Bool
+    @State private var dialTitle = ""
+    @State private var dialUrl = ""
+    @State private var dialCategory = "Быстрый доступ"
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                Spacer().frame(height: 48)
-                Image("Logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 96, height: 96)
-                    .accessibilityHidden(true)
-                Text("NeoSerf")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(palette.text)
-                    .padding(.top, 14)
-                if model.activeTab.isIncognito {
-                    Text("Инкогнито")
-                        .font(.system(size: 15))
-                        .foregroundColor(palette.tertiary)
-                        .padding(.top, 8)
-                }
-                searchField
-                    .padding(.top, 32)
-                if model.preferences.showWeatherWidget {
-                    WeatherWidget(state: model.weather) {
-                        Task { await model.refreshWeather() }
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 0) {
+                    FinLogo(size: 96)
+                    Spacer().frame(height: 14)
+                    Text("NeoSerf")
+                        .font(NeoFont.headlineLarge())
+                        .foregroundColor(palette.text)
+                        .multilineTextAlignment(.center)
+                    if model.activeTab.isIncognito {
+                        Spacer().frame(height: 8)
+                        Text("Инкогнито")
+                            .font(NeoFont.bodyMedium())
+                            .foregroundColor(palette.tertiary)
                     }
-                    .padding(.top, 28)
+                    Spacer().frame(height: 32)
+                    searchField
+                    if model.preferences.showWeatherWidget {
+                        Spacer().frame(height: 28)
+                        WeatherWidget(state: model.weather) {
+                            Task { await model.refreshWeather() }
+                        }
+                    }
+                    if model.preferences.showSpeedDial {
+                        Spacer().frame(height: 32)
+                        speedDialSection
+                    }
                 }
-                if model.preferences.showSpeedDial {
-                    speedDialSection
-                        .padding(.top, 32)
-                }
-                Spacer().frame(height: 40)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 40)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: geo.size.height, alignment: .center)
             }
-            .padding(.horizontal, 24)
-            .frame(maxWidth: 480)
-            .frame(maxWidth: .infinity)
         }
         .background(palette.background.ignoresSafeArea())
-        .sheet(isPresented: $showAddDial) {
-            AddSpeedDialSheet { title, url, category in
-                model.addSpeedDial(title: title, rawUrl: url, category: category)
-                showAddDial = false
-            } onCancel: {
-                showAddDial = false
-            }
-        }
+        .accessibilityIdentifier("start_page")
+        .overlay { if showAddDial { addDialDialog } }
     }
 
     private var searchField: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 18))
+            NeoIcon(name: NeoIcons.search, size: 21)
                 .foregroundColor(palette.secondaryText)
             ZStack(alignment: .leading) {
                 if query.isEmpty {
                     Text("Поиск или адрес сайта")
-                        .font(.system(size: 16))
+                        .font(NeoFont.bodyLarge())
                         .foregroundColor(palette.secondaryText)
                         .lineLimit(1)
                 }
                 TextField("", text: $query)
-                    .font(.system(size: 16))
+                    .font(NeoFont.bodyLarge())
                     .foregroundColor(palette.text)
                     .keyboardType(.URL)
                     .textInputAutocapitalization(.never)
@@ -77,50 +71,59 @@ struct StartPageView: View {
                     .submitLabel(.go)
                     .focused($searchFocused)
                     .onSubmit { submit() }
+                    .accessibilityIdentifier("omnibox_input")
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 16)
             Button(action: submit) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 18, weight: .semibold))
+                NeoIcon(name: NeoIcons.arrowForward, size: 20)
                     .foregroundColor(palette.primary)
-                    .frame(width: 44, height: 44)
+                    .frame(width: 48, height: 48)
             }
             .accessibilityLabel("Найти")
+            .accessibilityIdentifier("start_search_submit")
         }
         .padding(.leading, 18)
         .padding(.trailing, 4)
         .frame(minHeight: 56)
         .background(palette.surfaceVariant)
         .overlay(
-            RoundedRectangle(cornerRadius: 28)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(searchFocused ? palette.primary : palette.outline, lineWidth: 1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
     }
 
     private var speedDialSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Быстрый доступ")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(NeoFont.titleLarge())
                     .foregroundColor(palette.text)
                 Spacer()
-                Button(action: { showAddDial = true }) {
+                Button(action: {
+                    dialTitle = ""
+                    dialUrl = ""
+                    dialCategory = "Быстрый доступ"
+                    showAddDial = true
+                }) {
                     HStack(spacing: 4) {
-                        Image(systemName: "plus")
+                        NeoIcon(name: NeoIcons.add, size: 18)
                         Text("Добавить сайт")
                     }
-                    .font(.system(size: 15))
+                    .font(NeoFont.bodyLarge())
                     .foregroundColor(palette.primary)
                 }
+                .accessibilityIdentifier("add_speed_dial_button")
             }
             if model.speedDial.isEmpty {
                 Text("Добавьте любимые сайты на стартовую страницу для мгновенного перехода.")
-                    .font(.system(size: 14))
+                    .font(NeoFont.bodyMedium())
                     .foregroundColor(palette.secondaryText)
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(palette.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(model.speedDial) { tile in
@@ -132,6 +135,53 @@ struct StartPageView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var addDialDialog: some View {
+        ZStack {
+            Color.black.opacity(0.45).ignoresSafeArea().onTapGesture { showAddDial = false }
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Новая карточка быстрого доступа")
+                    .font(NeoFont.titleLarge())
+                    .foregroundColor(palette.text)
+                labeledField("Название сайта", text: $dialTitle, tag: "speed_dial_title_input")
+                labeledField("Адрес (URL)", text: $dialUrl, tag: "speed_dial_url_input")
+                labeledField("Категория", text: $dialCategory, tag: "speed_dial_category_input")
+                HStack {
+                    Button("Отмена") { showAddDial = false }.foregroundColor(palette.primary)
+                    Spacer()
+                    Button("Сохранить") {
+                        if !dialUrl.trimmingCharacters(in: .whitespaces).isEmpty {
+                            model.addSpeedDial(title: dialTitle, rawUrl: dialUrl, category: dialCategory)
+                            showAddDial = false
+                        }
+                    }
+                    .foregroundColor(palette.onPrimary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(palette.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .accessibilityIdentifier("speed_dial_save_button")
+                }
+            }
+            .padding(20)
+            .background(palette.surface)
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(palette.outline, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(24)
+        }
+    }
+
+    private func labeledField(_ label: String, text: Binding<String>, tag: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(NeoFont.labelLarge()).foregroundColor(palette.secondaryText)
+            TextField(label, text: text)
+                .font(NeoFont.bodyLarge())
+                .padding(10)
+                .background(palette.surfaceVariant)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityIdentifier(tag)
         }
     }
 
@@ -157,31 +207,32 @@ private struct SpeedDialCard: View {
                 ZStack {
                     Circle().fill(palette.primaryContainer)
                     Text(initial.isEmpty ? "N" : initial)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(NeoFont.titleMedium().weight(.bold))
                         .foregroundColor(palette.primary)
                 }
                 .frame(width: 34, height: 34)
                 Spacer()
                 Button(action: onDelete) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
+                    NeoIcon(name: NeoIcons.close, size: 14)
                         .foregroundColor(palette.secondaryText)
                 }
+                .accessibilityLabel("Удалить")
             }
             Text(tile.title)
-                .font(.system(size: 14, weight: .semibold))
+                .font(NeoFont.bodyMedium().weight(.semibold))
                 .foregroundColor(palette.text)
                 .lineLimit(1)
             Text(domain.isEmpty ? tile.url : domain)
-                .font(.system(size: 11, design: .monospaced))
+                .font(NeoFont.labelSmall())
                 .foregroundColor(palette.secondaryText)
                 .lineLimit(1)
         }
         .padding(12)
         .background(palette.surface)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(palette.outline, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(palette.outline, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onTapGesture(perform: onOpen)
+        .accessibilityIdentifier("speed_dial_tile_\(tile.id)")
     }
 }
 
@@ -195,86 +246,54 @@ struct WeatherWidget: View {
             switch state {
             case .loading:
                 HStack(spacing: 10) {
-                    ProgressView().scaleEffect(0.8)
+                    ProgressView().scaleEffect(0.7)
                     Text("Определяем погоду…")
-                        .font(.system(size: 14))
+                        .font(NeoFont.bodyMedium())
                         .foregroundColor(palette.secondaryText)
                 }
             case .error(let message):
                 Text(message)
-                    .font(.system(size: 14))
+                    .font(NeoFont.bodyMedium())
                     .foregroundColor(palette.secondaryText)
                     .multilineTextAlignment(.center)
                 Button("Повторить", action: onRefresh)
+                    .font(NeoFont.bodyLarge())
                     .foregroundColor(palette.primary)
+                    .accessibilityIdentifier("weather_refresh_button")
             case .success(let weather):
                 HStack(spacing: 10) {
-                    Image(systemName: icon(for: weather))
-                        .font(.system(size: 20))
+                    NeoIcon(name: icon(for: weather), size: 22)
                         .foregroundColor(palette.primary)
                     Text("\(Int(weather.temperatureC.rounded()))°")
-                        .font(.system(size: 22, weight: .bold))
+                        .font(NeoFont.headlineMedium())
                         .foregroundColor(palette.text)
                     Text(weather.cityName)
-                        .font(.system(size: 16))
+                        .font(NeoFont.bodyLarge())
                         .foregroundColor(palette.text)
                         .lineLimit(1)
                 }
                 Text("\(weather.conditionText) · ощущается как \(Int(weather.apparentTempC.rounded()))°")
-                    .font(.system(size: 14))
+                    .font(NeoFont.bodyMedium())
                     .foregroundColor(palette.secondaryText)
                     .multilineTextAlignment(.center)
                 Text("\(weather.locationSource) · \(weather.dataSource)")
-                    .font(.system(size: 12))
+                    .font(NeoFont.bodySmall())
                     .foregroundColor(palette.secondaryText)
+                    .multilineTextAlignment(.center)
             }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityIdentifier("weather_widget_card")
     }
 
     private func icon(for weather: WeatherForecast) -> String {
         switch weather.weatherCode {
-        case 0, 1: return weather.isDay ? "sun.max" : "moon"
-        case 2, 3: return "cloud"
-        case 45, 48: return "cloud.fog"
-        case 71, 73, 75, 77, 85, 86: return "snowflake"
-        case 95, 96, 99: return "cloud.bolt"
-        default: return "cloud.rain"
-        }
-    }
-}
-
-private struct AddSpeedDialSheet: View {
-    var onSave: (String, String, String) -> Void
-    var onCancel: () -> Void
-    @State private var title = ""
-    @State private var url = ""
-    @State private var category = "Быстрый доступ"
-    @Environment(\.palette) private var palette
-
-    var body: some View {
-        NavigationView {
-            Form {
-                TextField("Название сайта", text: $title)
-                TextField("Адрес (URL)", text: $url)
-                    .keyboardType(.URL)
-                    .textInputAutocapitalization(.never)
-                TextField("Категория", text: $category)
-            }
-            .navigationTitle("Новая карточка быстрого доступа")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
-                        if !url.trimmingCharacters(in: .whitespaces).isEmpty {
-                            onSave(title, url, category)
-                        }
-                    }
-                }
-            }
+        case 0, 1: return weather.isDay ? NeoIcons.wbSunny : NeoIcons.nightsStay
+        case 2, 3: return NeoIcons.cloud
+        case 45, 48: return NeoIcons.blurOn
+        case 71, 73, 75, 77, 85, 86: return NeoIcons.acUnit
+        case 95, 96, 99: return NeoIcons.thunderstorm
+        default: return NeoIcons.waterDrop
         }
     }
 }

@@ -82,6 +82,29 @@ enum AdBlocker {
     })();
     """
 
+    static func buildAutofillJs(username: String, password: String) -> String {
+        let user = username.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        let pass = password.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
+        return """
+        (function() {
+          try {
+            var user = '\(user)';
+            var pass = '\(pass)';
+            var inputs = Array.prototype.slice.call(document.querySelectorAll('input'));
+            var userEl = inputs.find(function(el) {
+              var t = (el.type || '').toLowerCase();
+              var n = ((el.name || '') + (el.id || '') + (el.autocomplete || '')).toLowerCase();
+              return t === 'email' || t === 'text' || n.indexOf('user') >= 0 || n.indexOf('login') >= 0 || n.indexOf('email') >= 0;
+            });
+            var passEl = inputs.find(function(el) { return (el.type || '').toLowerCase() === 'password'; });
+            if (userEl) { userEl.focus(); userEl.value = user; userEl.dispatchEvent(new Event('input', { bubbles: true })); }
+            if (passEl) { passEl.focus(); passEl.value = pass; passEl.dispatchEvent(new Event('input', { bubbles: true })); }
+            return true;
+          } catch (e) { return false; }
+        })();
+        """
+    }
+
     static func extractDomain(_ urlString: String?) -> String {
         guard let urlString = urlString, !urlString.isEmpty,
               let url = URL(string: urlString), let host = url.host?.lowercased() else {
