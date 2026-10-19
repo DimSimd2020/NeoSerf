@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-VERSION="${1:-1.3.4}"
+LABEL="${1:-1.3.4}"
+VERSION="${LABEL#v}"
 DERIVED="${DERIVED_DATA_PATH:-$ROOT/build}"
 CONFIG="${CONFIGURATION:-Release}"
 APP_SRC="$(find "$DERIVED/Build/Products/${CONFIG}-iphoneos" -name 'NeoSerf.app' -type d | head -n 1)"
@@ -24,7 +25,7 @@ cp -R "$APP_SRC" "$STAGE/Payload/NeoSerf.app"
 
 # Unsigned sideload IPA: Payload/NeoSerf.app zipped as .ipa
 mkdir -p "$ROOT/dist"
-IPA="$ROOT/dist/NeoSerf-${VERSION}.ipa"
+IPA="$ROOT/dist/NeoSerf-${LABEL}.ipa"
 rm -f "$IPA"
 (
   cd "$STAGE"
