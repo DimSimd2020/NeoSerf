@@ -28,5 +28,10 @@ debug.keystore
 /app/build/
 /desktop/build*/
 /desktop/dist/
+/ios/build/
+/ios/dist/
+/ios/*.xcodeproj
+/ios/*.xcworkspace
+xcuserdata/
 /artifacts/
 /aqtinstall.log
