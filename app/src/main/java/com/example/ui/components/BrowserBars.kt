@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -70,7 +68,8 @@ fun TopOmniboxBar(
   isBookmarked: Boolean,
   adBlockEnabled: Boolean,
   onSubmitInput: (String) -> Unit,
-  onToggleBookmark: () -> Unit,
+  onOpenBookmarks: () -> Unit,
+  onOpenMenu: () -> Unit,
   onReload: () -> Unit,
   onOpenShieldSheet: () -> Unit,
   onMoveFocusToContent: () -> Unit = {},
@@ -279,27 +278,13 @@ fun TopOmniboxBar(
           }
         }
 
-        Spacer(modifier = Modifier.width(4.dp))
+        Spacer(modifier = Modifier.width(2.dp))
 
-        // Quick Action: Bookmark Current Page
-        if (!activeTab.isStartPage) {
-          IconButton(
-            onClick = onToggleBookmark,
-            modifier = Modifier
-              .size(44.dp)
-              .testTag("bookmark_toggle_button")
-          ) {
-            Icon(
-              imageVector = if (isBookmarked) NeoIcons.Bookmark else NeoIcons.BookmarkBorder,
-              contentDescription = stringResource(R.string.cd_bookmark_toggle),
-              tint = if (isBookmarked) {
-                MaterialTheme.colorScheme.primary
-              } else {
-                MaterialTheme.colorScheme.onSurfaceVariant
-              }
-            )
-          }
-        }
+        BrowserTopActions(
+          isBookmarked = isBookmarked,
+          onOpenBookmarks = onOpenBookmarks,
+          onOpenMenu = onOpenMenu
+        )
       }
 
       AnimatedVisibility(visible = activeTab.isLoading) {
@@ -321,137 +306,45 @@ fun TopOmniboxBar(
   }
 }
 
+/**
+ * Bookmarks and the three-dot menu. They replace the old bottom bar and sit at the top
+ * right, both next to the address bar and on the start page.
+ */
 @Composable
-fun BottomBrowserBar(
-  activeTab: BrowserTab,
-  tabCount: Int,
-  onBack: () -> Unit,
-  onForward: () -> Unit,
-  onHome: () -> Unit,
-  onOpenTabs: () -> Unit,
+fun BrowserTopActions(
+  isBookmarked: Boolean,
+  onOpenBookmarks: () -> Unit,
   onOpenMenu: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
-  Surface(
-    color = MaterialTheme.colorScheme.surface,
-    tonalElevation = 0.dp,
-    modifier = Modifier.fillMaxWidth()
-  ) {
-    Column(
+  Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+    IconButton(
+      onClick = onOpenBookmarks,
       modifier = Modifier
-        .fillMaxWidth()
-        .windowInsetsPadding(WindowInsets.navigationBars)
+        .size(40.dp)
+        .testTag("nav_bookmarks_button")
     ) {
-      HorizontalDivider(
-        thickness = 1.dp,
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+      Icon(
+        imageVector = if (isBookmarked) NeoIcons.Bookmark else NeoIcons.BookmarkBorder,
+        contentDescription = "Закладки",
+        tint = if (isBookmarked) {
+          MaterialTheme.colorScheme.primary
+        } else {
+          MaterialTheme.colorScheme.onSurfaceVariant
+        }
       )
-      Row(
-        modifier = Modifier
-          .fillMaxWidth()
-          .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-      ) {
-        IconButton(
-          onClick = onBack,
-          enabled = !activeTab.isStartPage || activeTab.isReaderMode,
-          modifier = Modifier
-            .size(48.dp)
-            .testTag("nav_back_button")
-        ) {
-          Icon(
-            imageVector = NeoIcons.ArrowBack,
-            contentDescription = stringResource(R.string.nav_back),
-            tint = if (!activeTab.isStartPage || activeTab.isReaderMode) {
-              MaterialTheme.colorScheme.onSurface
-            } else {
-              MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            }
-          )
-        }
-
-        IconButton(
-          onClick = onForward,
-          enabled = activeTab.canGoForward && !activeTab.isStartPage,
-          modifier = Modifier
-            .size(48.dp)
-            .testTag("nav_forward_button")
-        ) {
-          Icon(
-            imageVector = NeoIcons.ArrowForward,
-            contentDescription = stringResource(R.string.nav_forward),
-            tint = if (activeTab.canGoForward && !activeTab.isStartPage) {
-              MaterialTheme.colorScheme.onSurface
-            } else {
-              MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-            }
-          )
-        }
-
-        IconButton(
-          onClick = onHome,
-          modifier = Modifier
-            .size(48.dp)
-            .testTag("nav_home_button")
-        ) {
-          Icon(
-            imageVector = NeoIcons.Home,
-            contentDescription = stringResource(R.string.nav_home),
-            tint = if (activeTab.isStartPage) {
-              MaterialTheme.colorScheme.primary
-            } else {
-              MaterialTheme.colorScheme.onSurface
-            }
-          )
-        }
-
-        IconButton(
-          onClick = onOpenTabs,
-          modifier = Modifier
-            .size(48.dp)
-            .testTag("nav_tabs_button")
-        ) {
-          Box(
-            modifier = Modifier
-              .size(28.dp)
-              .clip(RoundedCornerShape(8.dp))
-              .border(
-                width = 1.5.dp,
-                color = if (activeTab.isIncognito) {
-                  MaterialTheme.colorScheme.tertiary
-                } else {
-                  MaterialTheme.colorScheme.primary
-                },
-                shape = RoundedCornerShape(8.dp)
-              ),
-            contentAlignment = Alignment.Center
-          ) {
-            Text(
-              text = tabCount.toString(),
-              style = MaterialTheme.typography.labelLarge,
-              fontWeight = FontWeight.Bold,
-              color = if (activeTab.isIncognito) {
-                MaterialTheme.colorScheme.tertiary
-              } else {
-                MaterialTheme.colorScheme.primary
-              }
-            )
-          }
-        }
-
-        IconButton(
-          onClick = onOpenMenu,
-          modifier = Modifier
-            .size(48.dp)
-            .testTag("nav_menu_button")
-        ) {
-          Icon(
-            imageVector = NeoIcons.MoreVert,
-            contentDescription = stringResource(R.string.nav_menu),
-            tint = MaterialTheme.colorScheme.onSurface
-          )
-        }
-      }
+    }
+    IconButton(
+      onClick = onOpenMenu,
+      modifier = Modifier
+        .size(40.dp)
+        .testTag("nav_menu_button")
+    ) {
+      Icon(
+        imageVector = NeoIcons.MoreVert,
+        contentDescription = stringResource(R.string.nav_menu),
+        tint = MaterialTheme.colorScheme.onSurface
+      )
     }
   }
 }

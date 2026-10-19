@@ -29,6 +29,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -87,12 +88,13 @@ class BrowserUiRegressionTest {
     assertTrue(popup.width < home.width)
     assertTrue(popup.height < home.height)
     composeRule.onNodeWithTag("menu_settings").performClick()
-    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").performClick()
+    // Settings is a bottom sheet now, taller than the test screen, so scroll to each control first.
+    composeRule.onNodeWithTag("settings_engine_DuckDuckGo").performScrollTo().performClick()
     composeRule.waitUntil(5_000) {
       composeRule.onAllNodes(hasTestTag("settings_engine_DuckDuckGo") and isSelected()).fetchSemanticsNodes().isNotEmpty()
     }
     composeRule.onNodeWithTag("settings_engine_DuckDuckGo").assertIsSelected()
-    composeRule.onNodeWithTag("settings_weather").assertIsDisplayed()
+    composeRule.onNodeWithTag("settings_weather").performScrollTo().assertIsDisplayed()
   }
 
   @Test
@@ -121,7 +123,8 @@ class BrowserUiRegressionTest {
   }
 
   @Test fun tabsSheetFitsNarrowWidth() {
-    composeRule.onNodeWithTag("nav_tabs_button").performClick()
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_tabs").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_regular").assertIsDisplayed()
@@ -140,14 +143,14 @@ class BrowserUiRegressionTest {
       composeRule.onNodeWithTag("menu_settings").performClick()
     }
     openSettings()
-    composeRule.onNodeWithTag("settings_theme_LIGHT").performClick()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performScrollTo().performClick()
     composeRule.waitUntil(5_000) {
       composeRule.onAllNodes(hasTestTag("settings_theme_LIGHT") and isSelected()).fetchSemanticsNodes().isNotEmpty()
     }
     composeRule.activityRule.scenario.recreate()
     openSettings()
-    composeRule.onNodeWithTag("settings_theme_LIGHT").assertIsSelected()
-    composeRule.onNodeWithTag("settings_theme_SYSTEM").performClick()
+    composeRule.onNodeWithTag("settings_theme_LIGHT").performScrollTo().assertIsSelected()
+    composeRule.onNodeWithTag("settings_theme_SYSTEM").performScrollTo().performClick()
   }
 
   @Test fun shieldSheetToggleLabelDoesNotOverlapSwitch() {
@@ -167,7 +170,8 @@ class BrowserUiRegressionWideTest {
   @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
   @Test fun homeAndTabsFitWideWidth() {
     composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_tabs_button").performClick()
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_tabs").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
   }
@@ -211,7 +215,7 @@ class OmniboxSubmitGuardTest {
             isBookmarked = false,
             adBlockEnabled = true,
             onSubmitInput = { submits++ },
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onMoveFocusToContent = { contentFocus.requestFocus() },
@@ -252,7 +256,7 @@ class OmniboxSubmitGuardTest {
             activeTab = BrowserTab(),
             isBookmarked = false,
             adBlockEnabled = true,
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onSubmitInput = { submits++ },
@@ -294,7 +298,7 @@ class OmniboxSubmitGuardTest {
             isBookmarked = false,
             adBlockEnabled = true,
             onSubmitInput = { submits++ },
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onMoveFocusToContent = { contentFocus.requestFocus() },

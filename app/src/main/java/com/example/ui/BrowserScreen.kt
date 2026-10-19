@@ -16,6 +16,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
@@ -31,12 +32,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -45,12 +48,13 @@ import com.example.domain.BlockCategory
 import com.example.ui.auth.signOutUser
 import com.example.ui.components.AdBlockShieldSheet
 import com.example.ui.components.BookmarksSheet
-import com.example.ui.components.BottomBrowserBar
 import com.example.ui.components.BrowserMenuPopup
+import com.example.ui.components.BrowserTopActions
 import com.example.ui.components.HistorySheet
 import com.example.ui.components.PasswordVaultSheet
 import com.example.ui.components.ReaderModeOverlay
 import com.example.ui.components.StartPageContent
+import com.example.ui.components.SettingsModalSheet
 import com.example.ui.components.TabsModalSheet
 import com.example.ui.components.TopOmniboxBar
 import com.example.ui.viewmodel.BrowserViewModel
@@ -67,6 +71,7 @@ private enum class ActiveModal {
   TABS,
   SHIELD,
   MENU_CUSTOMIZE,
+  SETTINGS,
   BOOKMARKS,
   PASSWORDS,
   HISTORY
@@ -356,21 +361,11 @@ fun BrowserScreen(
         isBookmarked = isCurrentUrlBookmarked,
         adBlockEnabled = preferences.adBlockEnabled,
         onSubmitInput = viewModel::submitAddressOrQuery,
-        onToggleBookmark = { viewModel.toggleBookmarkForActiveTab() },
+        onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+        onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE },
         onReload = { viewModel.reloadOrGoBack(goBack = false) },
         onOpenShieldSheet = { activeModal = ActiveModal.SHIELD },
         onMoveFocusToContent = { moveFocusToContent() }
-      )
-    },
-    bottomBar = {
-      BottomBrowserBar(
-        activeTab = activeTab,
-        tabCount = tabs.size,
-        onBack = { viewModel.reloadOrGoBack(goBack = true) },
-        onForward = viewModel::goForward,
-        onHome = viewModel::navigateHome,
-        onOpenTabs = { activeModal = ActiveModal.TABS },
-        onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE }
       )
     }
   ) { innerPadding ->
@@ -378,6 +373,8 @@ fun BrowserScreen(
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
+        // The bottom bar used to keep the page above the system navigation bar; now the page does.
+        .navigationBarsPadding()
         .then(if (activeTab.isStartPage) Modifier.statusBarsPadding() else Modifier)
         .focusRequester(contentFocusRequester)
         .focusable()
@@ -397,6 +394,13 @@ fun BrowserScreen(
               onDeleteSpeedDial = viewModel::deleteSpeedDial,
             )
           }
+          // No top bar on the start page, so the bookmarks and menu buttons float at the top right.
+          BrowserTopActions(
+            isBookmarked = false,
+            onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+            onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE },
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 10.dp, top = 8.dp)
+          )
         }
 
         activeTab.isReaderMode -> {
@@ -423,35 +427,16 @@ fun BrowserScreen(
   BrowserMenuPopup(
     expanded = activeModal == ActiveModal.MENU_CUSTOMIZE,
     activeTab = activeTab,
-    preferences = preferences,
-    userEmail = userEmail,
-    cloudSyncAvailable = cloudSyncAvailable,
-    onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+    tabCount = tabs.size,
+    onOpenTabs = { activeModal = ActiveModal.TABS },
     onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
     onOpenHistory = { activeModal = ActiveModal.HISTORY },
     onToggleDesktopMode = viewModel::toggleDesktopMode,
     onToggleReaderMode = viewModel::toggleReaderMode,
-    onSelectSearchEngine = viewModel::selectSearchEngine,
     onAutofillActiveSite = viewModel::autofillMatchingSiteForActiveTab,
-    onSetShowWeather = viewModel::setShowWeatherWidget,
-    onSetShowSpeedDial = viewModel::setShowSpeedDial,
-    onSetAppTheme = viewModel::setAppTheme,
     onOpenShield = { activeModal = ActiveModal.SHIELD },
+    onOpenSettings = { activeModal = ActiveModal.SETTINGS },
     onNewTab = { incognito -> viewModel.createNewTab(isIncognito = incognito) },
-    onRefreshWeather = { viewModel.refreshWeather() },
-    onRequestLocation = { locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) },
-    onSignOut = {
-      val manager = credentialManager
-      if (manager != null) {
-        signOutUser(
-          credentialManager = manager,
-          onSignOutComplete = onSignedOut,
-          scope = scope
-        )
-      } else {
-        onSignedOut()
-      }
-    },
     onDismiss = { activeModal = ActiveModal.NONE }
   )
 
@@ -483,6 +468,33 @@ fun BrowserScreen(
     }
 
     ActiveModal.MENU_CUSTOMIZE -> Unit
+
+    ActiveModal.SETTINGS -> {
+      SettingsModalSheet(
+        preferences = preferences,
+        userEmail = userEmail,
+        cloudSyncAvailable = cloudSyncAvailable,
+        onSelectSearchEngine = viewModel::selectSearchEngine,
+        onSetShowWeather = viewModel::setShowWeatherWidget,
+        onSetShowSpeedDial = viewModel::setShowSpeedDial,
+        onSetAppTheme = viewModel::setAppTheme,
+        onRefreshWeather = { viewModel.refreshWeather() },
+        onRequestLocation = { locationPermission.launch(android.Manifest.permission.ACCESS_COARSE_LOCATION) },
+        onSignOut = {
+          val manager = credentialManager
+          if (manager != null) {
+            signOutUser(
+              credentialManager = manager,
+              onSignOutComplete = onSignedOut,
+              scope = scope
+            )
+          } else {
+            onSignedOut()
+          }
+        },
+        onDismiss = { activeModal = ActiveModal.NONE }
+      )
+    }
 
     ActiveModal.BOOKMARKS -> {
       BookmarksSheet(
