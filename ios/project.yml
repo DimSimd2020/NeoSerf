@@ -86,6 +86,8 @@ targets:
       - path: NeoSerfUITests
     settings:
       base:
+        PRODUCT_NAME: NeoSerfUITests
+        PRODUCT_MODULE_NAME: NeoSerfUITests
         PRODUCT_BUNDLE_IDENTIFIER: com.dimsimd.neoserf.uitests
         GENERATE_INFOPLIST_FILE: YES
         IPHONEOS_DEPLOYMENT_TARGET: "15.0"
