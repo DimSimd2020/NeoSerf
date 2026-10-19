@@ -49,10 +49,13 @@ class GuestModeWithoutFirebaseTest {
     assertFalse(composeRule.activity.isDestroyed)
 
     composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_back_button").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_forward_button").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_home_button").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_tabs_button").assertIsDisplayed()
+    // The bottom bar is gone: bookmarks and the menu live at the top right.
+    composeRule.onNodeWithTag("nav_bookmarks_button").assertIsDisplayed()
+    composeRule.onNodeWithTag("nav_menu_button").assertIsDisplayed()
+    composeRule.onNodeWithTag("nav_back_button").assertDoesNotExist()
+    composeRule.onNodeWithTag("nav_forward_button").assertDoesNotExist()
+    composeRule.onNodeWithTag("nav_home_button").assertDoesNotExist()
+    composeRule.onNodeWithTag("nav_tabs_button").assertDoesNotExist()
     composeRule.onNodeWithTag("google_sign_in_button").assertDoesNotExist()
   }
 

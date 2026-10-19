@@ -16,6 +16,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
@@ -31,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -45,8 +47,8 @@ import com.example.domain.BlockCategory
 import com.example.ui.auth.signOutUser
 import com.example.ui.components.AdBlockShieldSheet
 import com.example.ui.components.BookmarksSheet
-import com.example.ui.components.BottomBrowserBar
 import com.example.ui.components.BrowserMenuPopup
+import com.example.ui.components.BrowserTopActions
 import com.example.ui.components.HistorySheet
 import com.example.ui.components.PasswordVaultSheet
 import com.example.ui.components.ReaderModeOverlay
@@ -358,21 +360,11 @@ fun BrowserScreen(
         isBookmarked = isCurrentUrlBookmarked,
         adBlockEnabled = preferences.adBlockEnabled,
         onSubmitInput = viewModel::submitAddressOrQuery,
-        onToggleBookmark = { viewModel.toggleBookmarkForActiveTab() },
+        onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+        onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE },
         onReload = { viewModel.reloadOrGoBack(goBack = false) },
         onOpenShieldSheet = { activeModal = ActiveModal.SHIELD },
         onMoveFocusToContent = { moveFocusToContent() }
-      )
-    },
-    bottomBar = {
-      BottomBrowserBar(
-        activeTab = activeTab,
-        tabCount = tabs.size,
-        onBack = { viewModel.reloadOrGoBack(goBack = true) },
-        onForward = viewModel::goForward,
-        onHome = viewModel::navigateHome,
-        onOpenTabs = { activeModal = ActiveModal.TABS },
-        onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE }
       )
     }
   ) { innerPadding ->
@@ -380,6 +372,8 @@ fun BrowserScreen(
       modifier = Modifier
         .fillMaxSize()
         .padding(innerPadding)
+        // The bottom bar used to keep the page above the system navigation bar; now the page does.
+        .navigationBarsPadding()
         .then(if (activeTab.isStartPage) Modifier.statusBarsPadding() else Modifier)
         .focusRequester(contentFocusRequester)
         .focusable()
@@ -399,6 +393,13 @@ fun BrowserScreen(
               onDeleteSpeedDial = viewModel::deleteSpeedDial,
             )
           }
+          // No top bar on the start page, so the bookmarks and menu buttons float at the top right.
+          BrowserTopActions(
+            isBookmarked = false,
+            onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+            onOpenMenu = { activeModal = ActiveModal.MENU_CUSTOMIZE },
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 10.dp, top = 8.dp)
+          )
         }
 
         activeTab.isReaderMode -> {
@@ -425,7 +426,8 @@ fun BrowserScreen(
   BrowserMenuPopup(
     expanded = activeModal == ActiveModal.MENU_CUSTOMIZE,
     activeTab = activeTab,
-    onOpenBookmarks = { activeModal = ActiveModal.BOOKMARKS },
+    tabCount = tabs.size,
+    onOpenTabs = { activeModal = ActiveModal.TABS },
     onOpenPasswords = { activeModal = ActiveModal.PASSWORDS },
     onOpenHistory = { activeModal = ActiveModal.HISTORY },
     onToggleDesktopMode = viewModel::toggleDesktopMode,

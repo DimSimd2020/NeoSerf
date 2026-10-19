@@ -123,7 +123,8 @@ class BrowserUiRegressionTest {
   }
 
   @Test fun tabsSheetFitsNarrowWidth() {
-    composeRule.onNodeWithTag("nav_tabs_button").performClick()
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_tabs").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_regular").assertIsDisplayed()
@@ -169,7 +170,8 @@ class BrowserUiRegressionWideTest {
   @get:Rule(order = 1) val composeRule = createAndroidComposeRule<MainActivity>()
   @Test fun homeAndTabsFitWideWidth() {
     composeRule.onNodeWithTag("omnibox_input").assertIsDisplayed()
-    composeRule.onNodeWithTag("nav_tabs_button").performClick()
+    composeRule.onNodeWithTag("nav_menu_button").performClick()
+    composeRule.onNodeWithTag("menu_tabs").performClick()
     composeRule.onNodeWithText("Открытые вкладки").assertIsDisplayed()
     composeRule.onNodeWithTag("tabs_filter_incognito").assertIsDisplayed()
   }
@@ -213,7 +215,7 @@ class OmniboxSubmitGuardTest {
             isBookmarked = false,
             adBlockEnabled = true,
             onSubmitInput = { submits++ },
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onMoveFocusToContent = { contentFocus.requestFocus() },
@@ -254,7 +256,7 @@ class OmniboxSubmitGuardTest {
             activeTab = BrowserTab(),
             isBookmarked = false,
             adBlockEnabled = true,
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onSubmitInput = { submits++ },
@@ -296,7 +298,7 @@ class OmniboxSubmitGuardTest {
             isBookmarked = false,
             adBlockEnabled = true,
             onSubmitInput = { submits++ },
-            onToggleBookmark = {},
+            onOpenBookmarks = {}, onOpenMenu = {},
             onReload = {},
             onOpenShieldSheet = {},
             onMoveFocusToContent = { contentFocus.requestFocus() },
